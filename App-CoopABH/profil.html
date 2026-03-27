@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profil utilisateur</title>
+    <link rel="stylesheet" href="Style1.css">
+</head>
+<body>
+    <header class="page-header">
+        <button
+            type="button"
+            class="menu-btn"
+            id="menu-toggle"
+            aria-expanded="false"
+            aria-controls="side-menu"
+            aria-label="Ouvrir le menu"
+        >
+            ☰
+        </button>
+        <div class="header-date" id="current-date" aria-label="Date du jour"></div>
+        <h1>Cooperative Airbus</h1>
+        <a href="profil.html" class="profile-link">Mon profil</a>
+    </header>
+
+    <nav id="side-menu" class="side-menu" aria-hidden="true">
+        <button type="button" class="close-btn" id="menu-close" aria-label="Fermer le menu">×</button>
+        <a href="index1.html">Accueil</a>
+        <a href="Vente.html">Vente</a>
+        <a href="Stock.html">Stock</a>
+        <a href="profil.html">Profil</a>
+    </nav>
+
+    <main class="container profile-container">
+        <section class="profile-layout" aria-labelledby="profile-title">
+            <div class="profile-card">
+                <div class="section-heading">
+                    <h2 id="profile-title">Mon profil</h2>
+                    <p>Renseigne tes informations personnelles pour personnaliser ton espace.</p>
+                </div>
+
+                <div class="profile-preview">
+                    <label class="avatar-wrapper avatar-upload" for="profile-photo" aria-label="Choisir une photo de profil">
+                        <img
+                            id="profile-image-preview"
+                            class="profile-image hidden"
+                            alt="Photo de profil"
+                        >
+                        <div id="profile-placeholder" class="profile-placeholder">Aucune photo</div>
+                        <div class="avatar-overlay">+</div>
+                    </label>
+                    <input type="file" id="profile-photo" name="profilePhoto" accept="image/*" class="hidden-file-input">
+
+                    <div class="profile-identity">
+                        <strong id="display-full-name">Utilisateur</strong>
+                        <span id="display-subtitle">Ajoute ton nom, ton prenom et ta photo.</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="profile-card">
+                <div class="section-heading">
+                    <h2>Informations</h2>
+                    <p>Ces donnees sont enregistrees localement sur cet appareil.</p>
+                </div>
+
+                <form id="profile-form" class="profile-form">
+                    <label class="form-field" for="first-name">
+                        <span>Prenom</span>
+                        <input type="text" id="first-name" name="firstName" placeholder="Exemple : Alban" autocomplete="given-name">
+                    </label>
+
+                    <label class="form-field" for="last-name">
+                        <span>Nom</span>
+                        <input type="text" id="last-name" name="lastName" placeholder="Exemple : Clop" autocomplete="family-name">
+                    </label>
+
+                    <div class="profile-actions">
+                        <button type="submit" class="btn-vendu">Enregistrer</button>
+                        <button type="button" class="secondary-btn" id="reset-profile">Reinitialiser</button>
+                    </div>
+                </form>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        const menuToggleButton = document.getElementById("menu-toggle");
+        const menuCloseButton = document.getElementById("menu-close");
+        const currentDateElement = document.getElementById("current-date");
+        const sideMenu = document.getElementById("side-menu");
+        const sideMenuLinks = sideMenu.querySelectorAll("a");
+
+        const profileForm = document.getElementById("profile-form");
+        const firstNameInput = document.getElementById("first-name");
+        const lastNameInput = document.getElementById("last-name");
+        const photoInput = document.getElementById("profile-photo");
+        const profileImagePreview = document.getElementById("profile-image-preview");
+        const profilePlaceholder = document.getElementById("profile-placeholder");
+        const displayFullName = document.getElementById("display-full-name");
+        const displaySubtitle = document.getElementById("display-subtitle");
+        const resetProfileButton = document.getElementById("reset-profile");
+
+        const storageKey = "coopairbus-user-profile";
+        let profilePhotoData = "";
+
+        menuToggleButton.addEventListener("click", toggleMenu);
+        menuCloseButton.addEventListener("click", closeMenu);
+        sideMenuLinks.forEach((link) => link.addEventListener("click", closeMenu));
+        document.addEventListener("keydown", handleEscapeToCloseMenu);
+
+        profileForm.addEventListener("submit", saveProfile);
+        photoInput.addEventListener("change", handlePhotoSelection);
+        firstNameInput.addEventListener("input", updateProfilePreview);
+        lastNameInput.addEventListener("input", updateProfilePreview);
+        resetProfileButton.addEventListener("click", resetProfile);
+
+        updateCurrentDate();
+        window.setInterval(updateCurrentDate, 60000);
+        loadProfile();
+        updateProfilePreview();
+
+        function saveProfile(event) {
+            event.preventDefault();
+
+            const profile = {
+                firstName: firstNameInput.value.trim(),
+                lastName: lastNameInput.value.trim(),
+                photo: profilePhotoData
+            };
+
+            localStorage.setItem(storageKey, JSON.stringify(profile));
+            updateProfilePreview();
+            window.alert("Profil enregistre.");
+        }
+
+        function loadProfile() {
+            const savedProfile = localStorage.getItem(storageKey);
+
+            if (!savedProfile) {
+                return;
+            }
+
+            try {
+                const profile = JSON.parse(savedProfile);
+                firstNameInput.value = profile.firstName || "";
+                lastNameInput.value = profile.lastName || "";
+                profilePhotoData = profile.photo || "";
+                renderProfilePhoto(profilePhotoData);
+            } catch (error) {
+                localStorage.removeItem(storageKey);
+            }
+        }
+
+        function handlePhotoSelection(event) {
+            const [file] = event.target.files;
+
+            if (!file) {
+                return;
+            }
+
+            if (!file.type.startsWith("image/")) {
+                window.alert("Selectionne une image valide.");
+                photoInput.value = "";
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.addEventListener("load", () => {
+                profilePhotoData = String(reader.result || "");
+                renderProfilePhoto(profilePhotoData);
+            });
+            reader.readAsDataURL(file);
+        }
+
+        function updateProfilePreview() {
+            const firstName = firstNameInput.value.trim();
+            const lastName = lastNameInput.value.trim();
+            const fullName = `${firstName} ${lastName}`.trim();
+
+            displayFullName.textContent = fullName || "Utilisateur";
+            displaySubtitle.textContent = fullName
+                ? "Profil personalise et pret a etre utilise."
+                : "Ajoute ton nom, ton prenom et ta photo.";
+
+            renderProfilePhoto(profilePhotoData);
+        }
+
+        function renderProfilePhoto(photoData) {
+            if (photoData) {
+                profileImagePreview.src = photoData;
+                profileImagePreview.classList.remove("hidden");
+                profilePlaceholder.classList.add("hidden");
+                return;
+            }
+
+            profileImagePreview.removeAttribute("src");
+            profileImagePreview.classList.add("hidden");
+            profilePlaceholder.classList.remove("hidden");
+        }
+
+        function resetProfile() {
+            firstNameInput.value = "";
+            lastNameInput.value = "";
+            photoInput.value = "";
+            profilePhotoData = "";
+            localStorage.removeItem(storageKey);
+            updateProfilePreview();
+        }
+
+        function updateCurrentDate() {
+            currentDateElement.textContent = new Intl.DateTimeFormat("fr-FR", {
+                weekday: "long",
+                day: "numeric",
+                month: "long"
+            }).format(new Date());
+        }
+
+        function toggleMenu() {
+            const isOpen = sideMenu.classList.toggle("is-open");
+            sideMenu.setAttribute("aria-hidden", String(!isOpen));
+            menuToggleButton.setAttribute("aria-expanded", String(isOpen));
+        }
+
+        function closeMenu() {
+            sideMenu.classList.remove("is-open");
+            sideMenu.setAttribute("aria-hidden", "true");
+            menuToggleButton.setAttribute("aria-expanded", "false");
+        }
+
+        function handleEscapeToCloseMenu(event) {
+            if (event.key === "Escape" && sideMenu.classList.contains("is-open")) {
+                closeMenu();
+            }
+        }
+
+    </script>
+</body>
+</html>

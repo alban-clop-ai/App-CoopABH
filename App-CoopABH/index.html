@@ -1,0 +1,52 @@
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connexion</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+
+</header>
+<main>
+    <div class="login-container">
+        <form>
+            <h2>Connexion</h2>
+
+            <input type="text" id="username" name="username" placeholder="Identifiant" required>
+
+            <div class="password-container">
+                <input type="password" id="password" name="password" placeholder="Mot de passe" required>
+                <span class="toggle-password"
+                    onmousedown="showPassword()"
+                    onmouseup="hidePassword()"
+                    onmouseleave="hidePassword()"
+                    ontouchstart="showPassword()"
+                    ontouchend="hidePassword()">
+                    👁
+                </span>
+            </div>
+
+            <p class="login-error" aria-live="polite"></p>
+            <button type="button">Se connecter</button>
+        </form>
+    </div>
+
+    <script>
+    const passwordInput = document.getElementById("password");
+
+    function showPassword() {
+        passwordInput.type = "text";
+    }
+
+    function hidePassword() {
+        passwordInput.type = "password";
+    }
+    </script>
+</main>
+
+</body>
+</html>

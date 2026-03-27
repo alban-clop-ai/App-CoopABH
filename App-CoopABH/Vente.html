@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ventes</title>
+    <link rel="stylesheet" href="Style1.css">
+</head>
+<body>
+    <header class="page-header">
+        <button
+            type="button"
+            class="menu-btn"
+            id="menu-toggle"
+            aria-expanded="false"
+            aria-controls="side-menu"
+            aria-label="Ouvrir le menu"
+        >
+            ☰
+        </button>
+        <div class="header-date" id="current-date" aria-label="Date du jour"></div>
+        <h1>Cooperative Airbus</h1>
+        <a href="profil.html" class="profile-link">Mon profil</a>
+    </header>
+
+    <nav id="side-menu" class="side-menu" aria-hidden="true">
+        <button type="button" class="close-btn" id="menu-close" aria-label="Fermer le menu">×</button>
+        <a href="index1.html">Accueil</a>
+        <a href="Vente.html">Vente</a>
+        <a href="Stock.html">Stock</a>
+        <a href="profil.html">Profil</a>
+    </nav>
+
+    <main class="container sales-page">
+        <section class="sales-main-panel">
+            <div class="section-heading">
+                <h2>Consultation des ventes</h2>
+                <p>Choisis une date pour voir les articles vendus, les quantites et le chiffre du jour.</p>
+            </div>
+
+            <div class="sales-filter-card">
+                <label class="form-field" for="sales-date">
+                    <span>Date a consulter</span>
+                    <input type="date" id="sales-date" class="sales-date-input">
+                </label>
+            </div>
+
+            <div class="sales-summary" id="sales-summary"></div>
+            <div class="sales-list" id="sales-list"></div>
+        </section>
+
+        <aside class="sales-sidebar">
+            <div class="sales-month-card">
+                <div class="section-heading">
+                    <h2>Mois en cours</h2>
+                    <p>Vue rapide des recettes jour par jour.</p>
+                </div>
+
+                <div class="month-sales-list" id="month-sales-list"></div>
+            </div>
+        </aside>
+    </main>
+
+    <script src="app-data.js"></script>
+    <script>
+        /* Elements de la page */
+        const menuToggleButton = document.getElementById("menu-toggle");
+        const menuCloseButton = document.getElementById("menu-close");
+        const sideMenu = document.getElementById("side-menu");
+        const sideMenuLinks = sideMenu.querySelectorAll("a");
+        const currentDateElement = document.getElementById("current-date");
+        const salesDateInput = document.getElementById("sales-date");
+        const salesSummary = document.getElementById("sales-summary");
+        const salesList = document.getElementById("sales-list");
+        const monthSalesList = document.getElementById("month-sales-list");
+
+        /* Evenements de base */
+        menuToggleButton.addEventListener("click", toggleMenu);
+        menuCloseButton.addEventListener("click", closeMenu);
+        sideMenuLinks.forEach((link) => link.addEventListener("click", closeMenu));
+        document.addEventListener("keydown", handleEscapeToCloseMenu);
+        document.addEventListener("visibilitychange", handleVisibilityChange);
+        window.addEventListener("storage", renderSalesPage);
+        salesDateInput.addEventListener("change", renderSalesPage);
+
+        /* Initialisation */
+        salesDateInput.value = getTodayDate();
+        updateCurrentDate();
+        window.setInterval(updateCurrentDate, 60000);
+        renderSalesPage();
+
+        /* Affichage complet */
+        function renderSalesPage() {
+            const selectedDate = salesDateInput.value || getTodayDate();
+            const salesForDay = window.CoopStockStore.getSalesByDate(selectedDate);
+
+            renderDailySummary(salesForDay);
+            renderDailyDetails(salesForDay);
+            renderMonthQuickView();
+        }
+
+        /* Resume du jour */
+        function renderDailySummary(salesForDay) {
+            const details = buildDailyDetails(salesForDay);
+
+            salesSummary.innerHTML = `
+                <article class="summary-card">
+                    <span class="summary-label">Articles vendus</span>
+                    <strong>${details.totalQuantity}</strong>
+                </article>
+                <article class="summary-card">
+                    <span class="summary-label">References vendues</span>
+                    <strong>${details.items.length}</strong>
+                </article>
+                <article class="summary-card">
+                    <span class="summary-label">Solde total du jour</span>
+                    <strong>${formatPrice(details.totalAmount)} EUR</strong>
+                </article>
+            `;
+        }
+
+        /* Liste detaillee du jour */
+        function renderDailyDetails(salesForDay) {
+            const details = buildDailyDetails(salesForDay);
+            salesList.innerHTML = "";
+
+            if (details.items.length === 0) {
+                salesList.innerHTML = '<div class="empty-cart">Aucune vente enregistree pour cette date.</div>';
+                return;
+            }
+
+            details.items.forEach((item) => {
+                const row = document.createElement("article");
+                row.className = "sales-item-card";
+                row.innerHTML = `
+                    <div class="sales-item-main">
+                        <div>
+                            <h3>${item.name}</h3>
+                            <p>${item.qty} article(s) vendu(s)</p>
+                        </div>
+                        <strong>${formatPrice(item.total)} EUR</strong>
+                    </div>
+                `;
+                salesList.appendChild(row);
+            });
+        }
+
+        /* Recettes rapides du mois en cours */
+        function renderMonthQuickView() {
+            const sales = window.CoopStockStore.getSales();
+            const currentMonth = getTodayDate().slice(0, 7);
+            const totalsByDate = {};
+
+            sales.forEach((sale) => {
+                if (!sale.date.startsWith(currentMonth)) {
+                    return;
+                }
+
+                totalsByDate[sale.date] = (totalsByDate[sale.date] || 0) + sale.total;
+            });
+
+            const sortedDates = Object.keys(totalsByDate).sort().reverse();
+            monthSalesList.innerHTML = "";
+
+            if (sortedDates.length === 0) {
+                monthSalesList.innerHTML = '<div class="empty-cart">Aucune recette enregistree ce mois-ci.</div>';
+                return;
+            }
+
+            sortedDates.forEach((date) => {
+                const line = document.createElement("div");
+                line.className = "month-sales-item";
+                line.innerHTML = `
+                    <span>${formatShortDate(date)}</span>
+                    <strong>${formatPrice(totalsByDate[date])} EUR</strong>
+                `;
+                monthSalesList.appendChild(line);
+            });
+        }
+
+        /* Construction des donnees du jour */
+        function buildDailyDetails(salesForDay) {
+            const itemsMap = {};
+
+            salesForDay.forEach((sale) => {
+                sale.items.forEach((item) => {
+                    if (!itemsMap[item.id]) {
+                        itemsMap[item.id] = {
+                            id: item.id,
+                            name: item.name,
+                            qty: 0,
+                            total: 0
+                        };
+                    }
+
+                    itemsMap[item.id].qty += item.qty;
+                    itemsMap[item.id].total += item.qty * item.price;
+                });
+            });
+
+            const items = Object.values(itemsMap).sort((a, b) => b.total - a.total);
+            const totalQuantity = items.reduce((sum, item) => sum + item.qty, 0);
+            const totalAmount = items.reduce((sum, item) => sum + item.total, 0);
+
+            return {
+                items,
+                totalQuantity,
+                totalAmount
+            };
+        }
+
+        /* Fonctions utiles */
+        function getTodayDate() {
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, "0");
+            const day = String(today.getDate()).padStart(2, "0");
+            return `${year}-${month}-${day}`;
+        }
+
+        function formatPrice(value) {
+            return Number(value).toFixed(2);
+        }
+
+        function formatShortDate(date) {
+            return new Intl.DateTimeFormat("fr-FR", {
+                day: "numeric",
+                month: "short"
+            }).format(new Date(`${date}T12:00:00`));
+        }
+
+        function updateCurrentDate() {
+            currentDateElement.textContent = new Intl.DateTimeFormat("fr-FR", {
+                weekday: "long",
+                day: "numeric",
+                month: "long"
+            }).format(new Date());
+        }
+
+        function handleVisibilityChange() {
+            if (document.visibilityState === "visible") {
+                updateCurrentDate();
+                renderSalesPage();
+            }
+        }
+
+        /* Menu lateral */
+        function toggleMenu() {
+            const isOpen = sideMenu.classList.toggle("is-open");
+            sideMenu.setAttribute("aria-hidden", String(!isOpen));
+            menuToggleButton.setAttribute("aria-expanded", String(isOpen));
+        }
+
+        function closeMenu() {
+            sideMenu.classList.remove("is-open");
+            sideMenu.setAttribute("aria-hidden", "true");
+            menuToggleButton.setAttribute("aria-expanded", "false");
+        }
+
+        function handleEscapeToCloseMenu(event) {
+            if (event.key === "Escape" && sideMenu.classList.contains("is-open")) {
+                closeMenu();
+            }
+        }
+
+    </script>
+</body>
+</html>

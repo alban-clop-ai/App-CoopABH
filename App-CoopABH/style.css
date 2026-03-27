@@ -1,0 +1,144 @@
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: Arial, sans-serif;
+}
+
+/* Image de fond */
+body {
+    height: 100vh;
+    background: url("background2.jpg") no-repeat center center/cover;
+    background-attachment: fixed;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Carte de connexion */
+.login-container {
+    background: rgba(255, 255, 255, 0.15); /* transparence */
+    backdrop-filter: blur(10px); /* effet flou stylé */
+    padding: 40px;
+    border-radius: 15px;
+    width: 320px;
+    color: white;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+/* Titre */
+.login-container h2 {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+/* Champs */
+.login-container input {
+    width: 100%;
+    padding: 12px;
+    margin: 10px 0;
+    border: none;
+    border-radius: 8px;
+    outline: none;
+}
+
+/* Bouton */
+.login-container button {
+    width: 100%;
+    padding: 12px;
+    margin-top: 10px;
+    border: none;
+    border-radius: 8px;
+    background: #007BFF;
+    color: white;
+    font-size: 16px;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.login-container button:hover {
+    background: #0009b3;
+}
+
+.password-container {
+    position: relative;
+    color: rgb(0, 0, 0);
+}
+
+.password-container input {
+    width: 100%;
+    padding-right: 40px;
+}
+
+.toggle-password {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    user-select: none;
+}
+
+/* Animation douce globale */
+input, button {
+    transition: all 0.3s ease;
+}
+
+/* Effet au survol des champs */
+.login-container input:hover {
+    transform: scale(1.03);
+}
+
+/* Effet quand tu cliques dans un champ */
+.login-container input:focus {
+    transform: scale(1.05);
+    border: 2px solid #007BFF;
+    box-shadow: 0 0 10px rgba(0, 123, 255, 0.5);
+}
+
+/* Bouton hover */
+.login-container button:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 15px rgba(0, 123, 255, 0.7);
+}
+
+/* Bouton clic */
+.login-container button:active {
+    transform: scale(0.97);
+}
+
+.login-error {
+    min-height: 20px;
+    margin-top: 6px;
+    color: #000000;
+    font-size: 0.92rem;
+    text-align: center;
+}
+
+/* Effet sur l’icône œil */
+.toggle-password:hover {
+    transform: translateY(-50%) scale(1.2);
+    color: #007BFF;
+}
+
+/* Animation d’apparition de la carte */
+.login-container {
+    animation: fadeIn 0.8s ease;
+}
+
+/* Keyframes animation */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.login-container input {
+    background: rgba(255,255,255,0.8);
+}

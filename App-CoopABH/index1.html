@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cooperative Airbus</title>
+    <link rel="stylesheet" href="Style1.css">
+</head>
+<body>
+    <header class="page-header">
+        <button
+            type="button"
+            class="menu-btn"
+            id="menu-toggle"
+            aria-expanded="false"
+            aria-controls="side-menu"
+            aria-label="Ouvrir le menu"
+        >
+            ☰
+        </button>
+        <div class="header-date" id="current-date" aria-label="Date du jour"></div>
+        <h1>Cooperative Airbus</h1>
+        <a href="profil.html" class="profile-link">Mon profil</a>
+    </header>
+
+    <nav id="side-menu" class="side-menu" aria-hidden="true">
+        <button type="button" class="close-btn" id="menu-close" aria-label="Fermer le menu">×</button>
+        <a href="index1.html">Accueil</a>
+        <a href="Vente.html">Vente</a>
+        <a href="Stock.html">Stock</a>
+        <a href="profil.html">Profil</a>
+    </nav>
+
+    <main class="container">
+        <section class="articles-panel" aria-labelledby="articles-title">
+            <div class="section-heading">
+                <h2 id="articles-title">Articles</h2>
+                <p>Le stock affiche ici le rayon.</p>
+            </div>
+
+            <div id="category-sections" class="category-sections"></div>
+        </section>
+
+        <aside class="ticket" aria-labelledby="ticket-title">
+            <div class="section-heading">
+                <h2 id="ticket-title">Ticket</h2>
+                <p>Chaque ajout retire 1 unite du stock rayon.</p>
+            </div>
+
+            <ul id="cart-list" class="cart-list">
+                <li class="empty-cart">Aucun article pour le moment.</li>
+            </ul>
+
+            <div class="total">
+                <span>Total</span>
+                <strong><span id="total-price">0.00</span> EUR</strong>
+            </div>
+
+            <div class="ticket-footer">
+                <button type="button" class="btn-vendu" id="validate-sale">Vendu</button>
+            </div>
+        </aside>
+    </main>
+
+    <script src="app-data.js"></script>
+    <script>
+        const categorySections = document.getElementById("category-sections");
+        const cartList = document.getElementById("cart-list");
+        const totalPriceEl = document.getElementById("total-price");
+        const menuToggleButton = document.getElementById("menu-toggle");
+        const menuCloseButton = document.getElementById("menu-close");
+        const currentDateElement = document.getElementById("current-date");
+        const sideMenu = document.getElementById("side-menu");
+        const sideMenuLinks = sideMenu.querySelectorAll("a");
+        const validateSaleButton = document.getElementById("validate-sale");
+
+        const categoryStyles = {
+            cafes: "article-coffee",
+            boissons: "article-drink",
+            snacks: "article-snack"
+        };
+
+        const fallbackCategoryLabels = {
+            cafes: "Cafes",
+            boissons: "Boissons",
+            snacks: "Snacks"
+        };
+
+        let cart = {};
+
+        menuToggleButton.addEventListener("click", toggleMenu);
+        menuCloseButton.addEventListener("click", closeMenu);
+        sideMenuLinks.forEach((link) => link.addEventListener("click", closeMenu));
+        validateSaleButton.addEventListener("click", validateSale);
+        document.addEventListener("keydown", handleEscapeToCloseMenu);
+        document.addEventListener("visibilitychange", handleVisibilityChange);
+        window.addEventListener("storage", renderProducts);
+
+        updateCurrentDate();
+        window.setInterval(updateCurrentDate, 60000);
+        renderProducts();
+        renderCart();
+
+        function renderProducts() {
+            const products = window.CoopStockStore.getProducts();
+            const categories = window.CoopStockStore.categories;
+
+            categorySections.innerHTML = "";
+
+            categories.forEach((category) => {
+                const productsInCategory = products.filter((product) => product.category === category.id);
+
+                if (productsInCategory.length === 0) {
+                    return;
+                }
+
+                const section = document.createElement("section");
+                section.className = "category-block";
+
+                const title = document.createElement("div");
+                title.className = "category-title";
+                title.innerHTML = `
+                    <h3>${category.label || fallbackCategoryLabels[category.id] || category.id}</h3>
+                    <p>${productsInCategory.length} article(s)</p>
+                `;
+
+                const articlesGrid = document.createElement("div");
+                articlesGrid.className = "articles";
+
+                productsInCategory.forEach((product) => {
+                    const articleButton = document.createElement("button");
+                    articleButton.type = "button";
+                    articleButton.className = `article ${categoryStyles[product.category] || "article-snack"}`;
+                    articleButton.dataset.id = product.id;
+                    articleButton.addEventListener("click", () => addToCart(product.id));
+
+                    const imageMarkup = product.image
+                        ? `<img src="${product.image}" alt="${product.name}" class="article-image">`
+                        : `<div class="article-image article-image-placeholder">Pas d'image</div>`;
+
+                    articleButton.innerHTML = `
+                        ${imageMarkup}
+                        <span class="article-name">${product.name}</span>
+                        <span class="article-price">${formatPrice(product.price)} EUR</span>
+                        <span class="article-stock">Stock rayon : <span class="stock">${product.stockShelf}</span></span>
+                    `;
+
+                    articlesGrid.appendChild(articleButton);
+                });
+
+                section.append(title, articlesGrid);
+                categorySections.appendChild(section);
+            });
+        }
+
+        function addToCart(productId) {
+            const product = getProduct(productId);
+
+            if (!product) {
+                window.alert("Article introuvable.");
+                return;
+            }
+
+            if (product.stockShelf <= 0) {
+                window.alert("Stock rayon epuise.");
+                return;
+            }
+
+            try {
+                window.CoopStockStore.changeStock(productId, { stockShelfDelta: -1 });
+            } catch (error) {
+                window.alert("Impossible de retirer cet article du rayon.");
+                return;
+            }
+
+            if (!cart[productId]) {
+                cart[productId] = {
+                    id: product.id,
+                    name: product.name,
+                    price: product.price,
+                    qty: 0
+                };
+            }
+
+            cart[productId].qty += 1;
+            renderProducts();
+            renderCart();
+        }
+
+        function removeItem(productId) {
+            const cartItem = cart[productId];
+
+            if (!cartItem) {
+                return;
+            }
+
+            try {
+                window.CoopStockStore.changeStock(productId, { stockShelfDelta: cartItem.qty });
+            } catch (error) {
+                window.alert("Impossible de remettre cet article en rayon.");
+                return;
+            }
+
+            delete cart[productId];
+            renderProducts();
+            renderCart();
+        }
+
+        function validateSale() {
+            if (Object.keys(cart).length === 0) {
+                window.alert("Ticket vide !");
+                return;
+            }
+
+            const saleItems = Object.values(cart).map((item) => ({
+                id: item.id,
+                name: item.name,
+                qty: item.qty,
+                price: item.price
+            }));
+
+            const saleTotal = saleItems.reduce((sum, item) => sum + (item.qty * item.price), 0);
+
+            window.CoopStockStore.recordSale({
+                date: getTodayDate(),
+                createdAt: new Date().toISOString(),
+                items: saleItems,
+                total: saleTotal
+            });
+
+            cart = {};
+            renderCart();
+            window.alert("Vente validee.");
+        }
+
+        function renderCart() {
+            cartList.innerHTML = "";
+
+            const cartItems = Object.values(cart);
+
+            if (cartItems.length === 0) {
+                const emptyItem = document.createElement("li");
+                emptyItem.className = "empty-cart";
+                emptyItem.textContent = "Aucun article pour le moment.";
+                cartList.appendChild(emptyItem);
+                totalPriceEl.textContent = "0.00";
+                return;
+            }
+
+            let total = 0;
+
+            cartItems.forEach((item) => {
+                const listItem = document.createElement("li");
+                listItem.className = "cart-item";
+
+                const itemLabel = document.createElement("span");
+                itemLabel.className = "cart-item-label";
+                itemLabel.textContent = `${item.name} x${item.qty}`;
+
+                const itemPrice = document.createElement("span");
+                itemPrice.className = "cart-item-price";
+                itemPrice.textContent = `${formatPrice(item.price * item.qty)} EUR`;
+
+                const removeButton = document.createElement("button");
+                removeButton.type = "button";
+                removeButton.className = "remove-item-btn";
+                removeButton.textContent = "Retirer";
+                removeButton.addEventListener("click", () => removeItem(item.id));
+
+                listItem.append(itemLabel, itemPrice, removeButton);
+                cartList.appendChild(listItem);
+
+                total += item.price * item.qty;
+            });
+
+            totalPriceEl.textContent = formatPrice(total);
+        }
+
+        function getProduct(productId) {
+            return window.CoopStockStore.getProducts().find((product) => product.id === productId) || null;
+        }
+
+        function formatPrice(value) {
+            return Number(value).toFixed(2);
+        }
+
+        function getTodayDate() {
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, "0");
+            const day = String(today.getDate()).padStart(2, "0");
+            return `${year}-${month}-${day}`;
+        }
+
+        function updateCurrentDate() {
+            currentDateElement.textContent = new Intl.DateTimeFormat("fr-FR", {
+                weekday: "long",
+                day: "numeric",
+                month: "long"
+            }).format(new Date());
+        }
+
+        function handleVisibilityChange() {
+            if (document.visibilityState === "visible") {
+                updateCurrentDate();
+                renderProducts();
+            }
+        }
+
+        function toggleMenu() {
+            const isOpen = sideMenu.classList.toggle("is-open");
+            sideMenu.setAttribute("aria-hidden", String(!isOpen));
+            menuToggleButton.setAttribute("aria-expanded", String(isOpen));
+        }
+
+        function closeMenu() {
+            sideMenu.classList.remove("is-open");
+            sideMenu.setAttribute("aria-hidden", "true");
+            menuToggleButton.setAttribute("aria-expanded", "false");
+        }
+
+        function handleEscapeToCloseMenu(event) {
+            if (event.key === "Escape" && sideMenu.classList.contains("is-open")) {
+                closeMenu();
+            }
+        }
+
+    </script>
+</body>
+</html>

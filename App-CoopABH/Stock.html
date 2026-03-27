@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestion du stock</title>
+    <link rel="stylesheet" href="Style1.css">
+</head>
+<body>
+    <header class="page-header">
+        <button
+            type="button"
+            class="menu-btn"
+            id="menu-toggle"
+            aria-expanded="false"
+            aria-controls="side-menu"
+            aria-label="Ouvrir le menu"
+        >
+            ☰
+        </button>
+        <div class="header-date" id="current-date" aria-label="Date du jour"></div>
+        <h1>Cooperative Airbus</h1>
+        <a href="profil.html" class="profile-link">Mon profil</a>
+    </header>
+
+    <nav id="side-menu" class="side-menu" aria-hidden="true">
+        <button type="button" class="close-btn" id="menu-close" aria-label="Fermer le menu">×</button>
+        <a href="index1.html">Accueil</a>
+        <a href="Vente.html">Vente</a>
+        <a href="Stock.html">Stock</a>
+        <a href="profil.html">Profil</a>
+    </nav>
+
+    <main class="container stock-page">
+        <section class="stock-main-panel" aria-labelledby="stock-title">
+            <div class="section-heading">
+                <h2 id="stock-title">Gestion du stock</h2>
+                <p>Le rayon alimente la vente dans l'accueil. La reserve sert a recharger le rayon.</p>
+            </div>
+
+            <div class="stock-summary" id="stock-summary"></div>
+            <div class="stock-list" id="stock-list"></div>
+        </section>
+
+        <aside class="stock-sidebar">
+            <div class="stock-form-card">
+                <div class="section-heading">
+                    <h2>Ajouter un article</h2>
+                    <p>Cree un nouveau produit avec son prix, sa categorie, sa photo et ses stocks.</p>
+                </div>
+
+                <form id="add-product-form" class="profile-form">
+                    <label class="form-field" for="product-name">
+                        <span>Nom de l'article</span>
+                        <input type="text" id="product-name" name="name" required placeholder="Exemple : Pepsi">
+                    </label>
+
+                    <label class="form-field" for="product-category">
+                        <span>Categorie</span>
+                        <select id="product-category" name="category" class="form-select" required>
+                            <option value="cafes">Cafes</option>
+                            <option value="boissons">Boissons</option>
+                            <option value="snacks">Snacks</option>
+                        </select>
+                    </label>
+
+                    <label class="form-field" for="product-price">
+                        <span>Prix</span>
+                        <input type="number" id="product-price" name="price" min="0" step="0.01" required placeholder="0.80">
+                    </label>
+
+                    <label class="form-field" for="product-shelf">
+                        <span>Stock rayon</span>
+                        <input type="number" id="product-shelf" name="stockShelf" min="0" step="1" value="0" required>
+                    </label>
+
+                    <label class="form-field" for="product-reserve">
+                        <span>Stock reserve</span>
+                        <input type="number" id="product-reserve" name="stockReserve" min="0" step="1" value="0" required>
+                    </label>
+
+                    <label class="form-field" for="product-image">
+                        <span>Lien image</span>
+                        <input type="url" id="product-image" name="image" placeholder="https://...">
+                    </label>
+
+                    <div class="profile-actions">
+                        <button type="submit" class="btn-vendu">Ajouter</button>
+                    </div>
+                </form>
+            </div>
+        </aside>
+    </main>
+
+    <script src="app-data.js"></script>
+    <script>
+        /* Elements de la page */
+        const menuToggleButton = document.getElementById("menu-toggle");
+        const menuCloseButton = document.getElementById("menu-close");
+        const sideMenu = document.getElementById("side-menu");
+        const sideMenuLinks = sideMenu.querySelectorAll("a");
+        const currentDateElement = document.getElementById("current-date");
+        const stockSummary = document.getElementById("stock-summary");
+        const stockList = document.getElementById("stock-list");
+        const addProductForm = document.getElementById("add-product-form");
+        
+        /* Noms des categories */
+        const categoryLabels = {
+            cafes: "Cafes",
+            boissons: "Boissons",
+            snacks: "Snacks"
+        };
+
+        /* Evenements de base */
+        menuToggleButton.addEventListener("click", toggleMenu);
+        menuCloseButton.addEventListener("click", closeMenu);
+        sideMenuLinks.forEach((link) => link.addEventListener("click", closeMenu));
+        document.addEventListener("keydown", handleEscapeToCloseMenu);
+        addProductForm.addEventListener("submit", handleAddProduct);
+        window.addEventListener("storage", renderStockPage);
+        document.addEventListener("visibilitychange", handleVisibilityChange);
+
+        updateCurrentDate();
+        window.setInterval(updateCurrentDate, 60000);
+        renderStockPage();
+
+        /* Affichage complet de la page stock */
+        function renderStockPage() {
+            const products = window.CoopStockStore.getProducts();
+            renderSummary(products);
+            renderProductCards(products);
+        }
+
+        /* Resume du stock */
+        function renderSummary(products) {
+            const totalShelf = products.reduce((sum, product) => sum + product.stockShelf, 0);
+            const totalReserve = products.reduce((sum, product) => sum + product.stockReserve, 0);
+
+            stockSummary.innerHTML = `
+                <article class="summary-card">
+                    <span class="summary-label">Articles references</span>
+                    <strong>${products.length}</strong>
+                </article>
+                <article class="summary-card">
+                    <span class="summary-label">Total rayon</span>
+                    <strong>${totalShelf}</strong>
+                </article>
+                <article class="summary-card">
+                    <span class="summary-label">Total reserve</span>
+                    <strong>${totalReserve}</strong>
+                </article>
+            `;
+        }
+
+        /* Cartes des articles */
+        function renderProductCards(products) {
+            stockList.innerHTML = "";
+
+            if (products.length === 0) {
+                stockList.innerHTML = '<div class="empty-cart">Aucun article dans le stock.</div>';
+                return;
+            }
+
+            products.forEach((product) => {
+                stockList.appendChild(createProductCard(product));
+            });
+
+            stockList.querySelectorAll(".stock-action-btn").forEach((button) => {
+                button.addEventListener("click", handleStockAction);
+            });
+        }
+
+        function createProductCard(product) {
+            const article = document.createElement("article");
+            article.className = "stock-item-card";
+
+            const imageMarkup = product.image
+                ? `<img src="${product.image}" alt="${product.name}" class="stock-item-image">`
+                : `<div class="stock-item-image stock-item-image-placeholder">Pas d'image</div>`;
+
+            article.innerHTML = `
+                <div class="stock-item-main">
+                    ${imageMarkup}
+                    <div class="stock-item-text">
+                        <div class="stock-item-header">
+                            <div>
+                                <h3>${product.name}</h3>
+                                <p>${categoryLabels[product.category] || product.category}</p>
+                            </div>
+                            <strong>${formatPrice(product.price)} EUR</strong>
+                        </div>
+
+                        <div class="stock-badges">
+                            <span class="stock-badge shelf-badge">Rayon : ${product.stockShelf}</span>
+                            <span class="stock-badge reserve-badge">Reserve : ${product.stockReserve}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="stock-item-actions">
+                    <div class="stock-action-group">
+                        <span>Transfert reserve vers rayon</span>
+                        <div class="stock-inline-form">
+                            <input type="number" min="1" value="1" class="stock-qty-input">
+                            <button type="button" class="btn-vendu stock-action-btn" data-action="transfer" data-id="${product.id}">Transfert</button>
+                        </div>
+                    </div>
+
+                    <div class="stock-action-group stock-action-group-right">
+                        <span>Ajouter dans la reserve</span>
+                        <div class="stock-inline-form">
+                            <input type="number" min="1" value="1" class="stock-qty-input">
+                            <button type="button" class="secondary-btn stock-action-btn" data-action="add-reserve" data-id="${product.id}">Ajouter</button>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="button" class="remove-item-btn stock-delete-btn stock-action-btn" data-action="delete-product" data-id="${product.id}">
+                    Supprimer
+                </button>
+            `;
+
+            return article;
+        }
+
+        /* Actions sur une carte article */
+        function handleStockAction(event) {
+            const button = event.currentTarget;
+            const action = button.dataset.action;
+            const productId = button.dataset.id;
+
+            try {
+                if (action === "transfer") {
+                    const quantity = getActionQuantity(button);
+                    window.CoopStockStore.transferReserveToShelf(productId, quantity);
+                }
+
+                if (action === "add-reserve") {
+                    const quantity = getActionQuantity(button);
+                    window.CoopStockStore.changeStock(productId, { stockReserveDelta: quantity });
+                }
+
+                if (action === "delete-product") {
+                    deleteProduct(productId);
+                }
+
+                renderStockPage();
+            } catch (error) {
+                window.alert("Operation impossible. Verifie la quantite saisie et le stock disponible.");
+            }
+        }
+
+        function getActionQuantity(button) {
+            const input = button.parentElement.querySelector(".stock-qty-input");
+            const quantity = Number(input.value);
+
+            if (!Number.isInteger(quantity) || quantity <= 0) {
+                throw new Error("Quantite invalide");
+            }
+
+            return quantity;
+        }
+
+        function deleteProduct(productId) {
+            const confirmed = window.confirm("Supprimer cet article du stock et de l'accueil ?");
+
+            if (!confirmed) {
+                return;
+            }
+
+            window.CoopStockStore.deleteProduct(productId);
+        }
+
+        /* Ajout d'un nouvel article */
+        function handleAddProduct(event) {
+            event.preventDefault();
+
+            const formData = new FormData(addProductForm);
+
+            window.CoopStockStore.addProduct({
+                name: String(formData.get("name") || "").trim(),
+                category: String(formData.get("category") || "snacks"),
+                price: Number(formData.get("price") || 0),
+                stockShelf: Number(formData.get("stockShelf") || 0),
+                stockReserve: Number(formData.get("stockReserve") || 0),
+                image: String(formData.get("image") || "").trim()
+            });
+
+            addProductForm.reset();
+            addProductForm.querySelector("#product-shelf").value = 0;
+            addProductForm.querySelector("#product-reserve").value = 0;
+            renderStockPage();
+            window.alert("Article ajoute.");
+        }
+
+        /* Fonctions utiles */
+        function formatPrice(value) {
+            return Number(value).toFixed(2);
+        }
+
+        function updateCurrentDate() {
+            currentDateElement.textContent = new Intl.DateTimeFormat("fr-FR", {
+                weekday: "long",
+                day: "numeric",
+                month: "long"
+            }).format(new Date());
+        }
+
+        function handleVisibilityChange() {
+            if (document.visibilityState === "visible") {
+                updateCurrentDate();
+                renderStockPage();
+            }
+        }
+
+        /* Menu lateral */
+        function toggleMenu() {
+            const isOpen = sideMenu.classList.toggle("is-open");
+            sideMenu.setAttribute("aria-hidden", String(!isOpen));
+            menuToggleButton.setAttribute("aria-expanded", String(isOpen));
+        }
+
+        function closeMenu() {
+            sideMenu.classList.remove("is-open");
+            sideMenu.setAttribute("aria-hidden", "true");
+            menuToggleButton.setAttribute("aria-expanded", "false");
+        }
+
+        function handleEscapeToCloseMenu(event) {
+            if (event.key === "Escape" && sideMenu.classList.contains("is-open")) {
+                closeMenu();
+            }
+        }
+
+    </script>
+</body>
+</html>
