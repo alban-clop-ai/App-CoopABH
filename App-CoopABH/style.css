@@ -22,9 +22,30 @@ body {
     backdrop-filter: blur(10px); /* effet flou stylé */
     padding: 40px;
     border-radius: 15px;
-    width: 320px;
+    width: min(90vw, 760px);
     color: white;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 32px;
+}
+
+.login-container form {
+    width: 320px;
+}
+
+.login-visual {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+}
+
+.login-logo {
+    width: min(240px, 100%);
+    height: auto;
+    object-fit: contain;
 }
 
 /* Titre */
@@ -141,4 +162,20 @@ input, button {
 
 .login-container input {
     background: rgba(255,255,255,0.8);
+}
+
+@media (max-width: 700px) {
+    .login-container {
+        flex-direction: column;
+        width: min(92vw, 360px);
+        padding: 32px 24px;
+    }
+
+    .login-container form {
+        width: 100%;
+    }
+
+    .login-logo {
+        width: min(180px, 100%);
+    }
 }
