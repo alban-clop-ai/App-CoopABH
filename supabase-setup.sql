@@ -12,6 +12,11 @@ create table if not exists public.products (
     updated_at timestamptz not null default timezone('utc', now())
 );
 
+create table if not exists public.categories (
+    id text primary key,
+    label text not null
+);
+
 create table if not exists public.sales (
     id uuid primary key default gen_random_uuid(),
     sale_date date not null default current_date,
@@ -77,6 +82,52 @@ begin
 end;
 $$;
 
+create or replace function public.rename_category(
+    p_old_id text,
+    p_new_id text,
+    p_new_label text
+)
+returns void
+language plpgsql
+security definer
+as $$
+begin
+    if p_old_id = p_new_id then
+        update public.categories
+        set label = p_new_label
+        where id = p_old_id;
+    else
+        insert into public.categories (id, label)
+        values (p_new_id, p_new_label);
+
+        update public.products
+        set category = p_new_id
+        where category = p_old_id;
+
+        delete from public.categories
+        where id = p_old_id;
+    end if;
+end;
+$$;
+
+create or replace function public.delete_category_and_reassign_products(
+    p_category_id text,
+    p_fallback_category_id text
+)
+returns void
+language plpgsql
+security definer
+as $$
+begin
+    update public.products
+    set category = p_fallback_category_id
+    where category = p_category_id;
+
+    delete from public.categories
+    where id = p_category_id;
+end;
+$$;
+
 create or replace function public.delete_sale_and_restore_stock(p_sale_id uuid)
 returns void
 language plpgsql
@@ -103,8 +154,38 @@ end;
 $$;
 
 alter table public.products enable row level security;
+alter table public.categories enable row level security;
 alter table public.sales enable row level security;
 alter table public.sale_items enable row level security;
+
+drop policy if exists "Authenticated users can read categories" on public.categories;
+create policy "Authenticated users can read categories"
+on public.categories
+for select
+to authenticated
+using (true);
+
+drop policy if exists "Authenticated users can insert categories" on public.categories;
+create policy "Authenticated users can insert categories"
+on public.categories
+for insert
+to authenticated
+with check (true);
+
+drop policy if exists "Authenticated users can update categories" on public.categories;
+create policy "Authenticated users can update categories"
+on public.categories
+for update
+to authenticated
+using (true)
+with check (true);
+
+drop policy if exists "Authenticated users can delete categories" on public.categories;
+create policy "Authenticated users can delete categories"
+on public.categories
+for delete
+to authenticated
+using (true);
 
 drop policy if exists "Authenticated users can read products" on public.products;
 create policy "Authenticated users can read products"
@@ -172,6 +253,16 @@ with check (true);
 
 do $$
 begin
+    if not exists (
+        select 1
+        from pg_publication_tables
+        where pubname = 'supabase_realtime'
+        and schemaname = 'public'
+        and tablename = 'categories'
+    ) then
+        execute 'alter publication supabase_realtime add table public.categories';
+    end if;
+
     if not exists (
         select 1
         from pg_publication_tables

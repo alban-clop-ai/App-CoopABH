@@ -33,7 +33,7 @@
         <a href="index1.html">Accueil</a>
         <a href="Vente.html">Vente</a>
         <a href="Stock.html">Stock</a>
-        <a href="profil.html">Profil</a>
+        <a href="paramètre.html">Parametre</a>
         <button type="button" class="side-menu-logout" id="logout-button">Deconnexion</button>
     </nav>
 
@@ -120,7 +120,7 @@
 
         async function renderProducts() {
             const products = await getStorefrontProducts();
-            const categories = window.CoopStockStore.categories;
+            const categories = await window.CoopStockStore.getCategories();
 
             categorySections.innerHTML = "";
 

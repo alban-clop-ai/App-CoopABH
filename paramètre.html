@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Parametres</title>
+    <link rel="stylesheet" href="Style1.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="auth-config.js"></script>
+    <script src="auth.js"></script>
+    <script src="app-ui.js"></script>
+</head>
+<body>
+    <header class="page-header">
+        <button
+            type="button"
+            class="menu-btn"
+            id="menu-toggle"
+            aria-expanded="false"
+            aria-controls="side-menu"
+            aria-label="Ouvrir le menu"
+        >
+            ☰
+        </button>
+        <div class="header-profile-name" id="header-profile-name">Utilisateur</div>
+        <div class="header-date" id="current-date" aria-label="Date du jour"></div>
+        <h1>Cooperative Airbus</h1>
+        <a href="profil.html" class="profile-link">Mon profil</a>
+    </header>
+
+    <nav id="side-menu" class="side-menu" aria-hidden="true">
+        <button type="button" class="close-btn" id="menu-close" aria-label="Fermer le menu">×</button>
+        <a href="index1.html">Accueil</a>
+        <a href="Vente.html">Vente</a>
+        <a href="Stock.html">Stock</a>
+        <a href="paramètre.html">Parametre</a>
+        <button type="button" class="side-menu-logout" id="logout-button">Deconnexion</button>
+    </nav>
+
+    <main class="container settings-page">
+        <section class="settings-card">
+            <div class="section-heading">
+                <h2>Ajouter ou modifier un article</h2>
+                <p>Ajoute un nouvel article ou selectionne un article existant pour modifier son nom, son prix, son image et ses stocks.</p>
+            </div>
+
+            <div class="settings-toolbar">
+                <label class="form-field" for="product-selector">
+                    <span>Article a modifier</span>
+                    <select id="product-selector" class="form-select"></select>
+                </label>
+                <button type="button" class="secondary-btn" id="new-product-button">Nouvel article</button>
+            </div>
+
+            <form id="product-form" class="profile-form">
+                <label class="form-field" for="product-name">
+                    <span>Nom de l'article</span>
+                    <input type="text" id="product-name" name="name" required placeholder="Exemple : Pepsi">
+                </label>
+
+                <label class="form-field" for="product-category">
+                    <span>Categorie</span>
+                    <select id="product-category" name="category" class="form-select" required></select>
+                </label>
+
+                <div class="settings-form-grid">
+                    <label class="form-field" for="product-price">
+                        <span>Prix</span>
+                        <input type="number" id="product-price" name="price" min="0" step="0.01" required placeholder="0.80">
+                    </label>
+
+                    <label class="form-field" for="product-shelf">
+                        <span>Stock rayon</span>
+                        <input type="number" id="product-shelf" name="stockShelf" min="0" step="1" value="0" required>
+                    </label>
+
+                    <label class="form-field" for="product-reserve">
+                        <span>Stock reserve</span>
+                        <input type="number" id="product-reserve" name="stockReserve" min="0" step="1" value="0" required>
+                    </label>
+                </div>
+
+                <label class="form-field" for="product-image">
+                    <span>Lien image</span>
+                    <input type="url" id="product-image" name="image" placeholder="https://...">
+                </label>
+
+                <div class="profile-actions">
+                    <button type="submit" class="btn-vendu" id="save-product-button">Enregistrer l'article</button>
+                    <button type="button" class="secondary-btn" id="delete-product-button">Supprimer l'article</button>
+                </div>
+            </form>
+        </section>
+
+        <section class="settings-card">
+            <div class="section-heading">
+                <h2>Ajouter une categorie</h2>
+                <p>Cree, modifie ou supprime les categories utilisees dans l'accueil, le stock et les parametres.</p>
+            </div>
+
+            <div class="settings-toolbar">
+                <label class="form-field" for="category-selector">
+                    <span>Categorie a modifier</span>
+                    <select id="category-selector" class="form-select"></select>
+                </label>
+                <button type="button" class="secondary-btn" id="new-category-button">Nouvelle categorie</button>
+            </div>
+
+            <form id="category-form" class="profile-form">
+                <label class="form-field" for="category-label">
+                    <span>Nom affiche</span>
+                    <input type="text" id="category-label" name="label" required placeholder="Exemple : Cafes froids">
+                </label>
+
+                <label class="form-field" for="category-id">
+                    <span>Identifiant interne</span>
+                    <input type="text" id="category-id" name="id" required placeholder="Exemple : cafes-froids">
+                </label>
+
+                <div class="profile-actions">
+                    <button type="submit" class="btn-vendu">Enregistrer la categorie</button>
+                    <button type="button" class="secondary-btn" id="delete-category-button">Supprimer la categorie</button>
+                </div>
+            </form>
+
+            <div class="settings-list-card">
+                <h3>Categories actuelles</h3>
+                <div id="category-list" class="settings-badge-list"></div>
+            </div>
+        </section>
+    </main>
+
+    <script src="app-data.js"></script>
+    <script>
+        window.CoopAuth.requireAuth();
+        window.CoopAuth.attachLogoutButton();
+        window.CoopAppUi.renderHeaderProfileName();
+
+        const menuToggleButton = document.getElementById("menu-toggle");
+        const menuCloseButton = document.getElementById("menu-close");
+        const sideMenu = document.getElementById("side-menu");
+        const sideMenuLinks = sideMenu.querySelectorAll("a");
+        const currentDateElement = document.getElementById("current-date");
+
+        const productSelector = document.getElementById("product-selector");
+        const productForm = document.getElementById("product-form");
+        const productCategorySelect = document.getElementById("product-category");
+        const deleteProductButton = document.getElementById("delete-product-button");
+        const newProductButton = document.getElementById("new-product-button");
+
+        const categorySelector = document.getElementById("category-selector");
+        const categoryForm = document.getElementById("category-form");
+        const deleteCategoryButton = document.getElementById("delete-category-button");
+        const newCategoryButton = document.getElementById("new-category-button");
+        const categoryList = document.getElementById("category-list");
+
+        let products = [];
+        let categories = [];
+        let editingProductId = "";
+        let editingCategoryId = "";
+
+        menuToggleButton.addEventListener("click", toggleMenu);
+        menuCloseButton.addEventListener("click", closeMenu);
+        sideMenuLinks.forEach((link) => link.addEventListener("click", closeMenu));
+        document.addEventListener("keydown", handleEscapeToCloseMenu);
+        document.addEventListener("visibilitychange", handleVisibilityChange);
+        productSelector.addEventListener("change", handleProductSelection);
+        categorySelector.addEventListener("change", handleCategorySelection);
+        newProductButton.addEventListener("click", prepareNewProductForm);
+        newCategoryButton.addEventListener("click", prepareNewCategoryForm);
+        deleteProductButton.addEventListener("click", handleDeleteProduct);
+        deleteCategoryButton.addEventListener("click", handleDeleteCategory);
+        productForm.addEventListener("submit", handleProductSubmit);
+        categoryForm.addEventListener("submit", handleCategorySubmit);
+        window.CoopStockStore.subscribe(() => {
+            refreshPageData();
+        });
+
+        initializePage();
+
+        async function initializePage() {
+            await window.CoopStockStore.init();
+            updateCurrentDate();
+            window.setInterval(updateCurrentDate, 60000);
+            await refreshPageData();
+        }
+
+        async function refreshPageData() {
+            categories = await window.CoopStockStore.getCategories();
+            products = await window.CoopStockStore.getProducts();
+            renderCategoryOptions();
+            renderProductOptions();
+            renderCategoryList();
+
+            if (editingProductId && products.some((product) => product.id === editingProductId)) {
+                fillProductForm(editingProductId);
+            } else {
+                prepareNewProductForm();
+            }
+
+            if (editingCategoryId && categories.some((category) => category.id === editingCategoryId)) {
+                fillCategoryForm(editingCategoryId);
+            } else {
+                prepareNewCategoryForm();
+            }
+        }
+
+        function renderProductOptions() {
+            const options = ['<option value="">Nouvel article</option>']
+                .concat(products.map((product) => `<option value="${product.id}">${product.name}</option>`));
+
+            productSelector.innerHTML = options.join("");
+            productSelector.value = editingProductId;
+        }
+
+        function renderCategoryOptions() {
+            productCategorySelect.innerHTML = categories.map((category) => `
+                <option value="${category.id}">${category.label}</option>
+            `).join("");
+
+            categorySelector.innerHTML = ['<option value="">Nouvelle categorie</option>']
+                .concat(categories.map((category) => `<option value="${category.id}">${category.label}</option>`))
+                .join("");
+
+            categorySelector.value = editingCategoryId;
+        }
+
+        function renderCategoryList() {
+            categoryList.innerHTML = "";
+
+            categories.forEach((category) => {
+                const badge = document.createElement("button");
+                badge.type = "button";
+                badge.className = "settings-badge";
+                badge.textContent = `${category.label} (${category.id})`;
+                badge.addEventListener("click", () => {
+                    editingCategoryId = category.id;
+                    fillCategoryForm(category.id);
+                });
+                categoryList.appendChild(badge);
+            });
+        }
+
+        function handleProductSelection() {
+            editingProductId = productSelector.value;
+
+            if (!editingProductId) {
+                prepareNewProductForm();
+                return;
+            }
+
+            fillProductForm(editingProductId);
+        }
+
+        function fillProductForm(productId) {
+            const product = products.find((item) => item.id === productId);
+
+            if (!product) {
+                prepareNewProductForm();
+                return;
+            }
+
+            editingProductId = product.id;
+            productSelector.value = product.id;
+            productForm.elements.name.value = product.name;
+            productForm.elements.category.value = product.category;
+            productForm.elements.price.value = product.price;
+            productForm.elements.stockShelf.value = product.stockShelf;
+            productForm.elements.stockReserve.value = product.stockReserve;
+            productForm.elements.image.value = product.image;
+            deleteProductButton.disabled = false;
+        }
+
+        function prepareNewProductForm() {
+            editingProductId = "";
+            productSelector.value = "";
+            productForm.reset();
+            productForm.elements.stockShelf.value = 0;
+            productForm.elements.stockReserve.value = 0;
+            productForm.elements.category.value = categories[0]?.id || "";
+            deleteProductButton.disabled = true;
+        }
+
+        async function handleProductSubmit(event) {
+            event.preventDefault();
+
+            const formData = new FormData(productForm);
+            const productPayload = {
+                name: String(formData.get("name") || "").trim(),
+                category: String(formData.get("category") || ""),
+                price: Number(formData.get("price") || 0),
+                stockShelf: Number(formData.get("stockShelf") || 0),
+                stockReserve: Number(formData.get("stockReserve") || 0),
+                image: String(formData.get("image") || "").trim()
+            };
+
+            try {
+                if (editingProductId) {
+                    await window.CoopStockStore.updateProduct(editingProductId, () => productPayload);
+                    window.alert("Article modifie.");
+                } else {
+                    const createdProduct = await window.CoopStockStore.addProduct(productPayload);
+                    editingProductId = createdProduct.id;
+                    window.alert("Article ajoute.");
+                }
+
+                await refreshPageData();
+            } catch (error) {
+                window.alert("Impossible d'enregistrer cet article.");
+            }
+        }
+
+        async function handleDeleteProduct() {
+            if (!editingProductId) {
+                return;
+            }
+
+            const confirmed = window.confirm("Supprimer cet article de toute l'application ?");
+
+            if (!confirmed) {
+                return;
+            }
+
+            try {
+                await window.CoopStockStore.deleteProduct(editingProductId);
+                prepareNewProductForm();
+                await refreshPageData();
+                window.alert("Article supprime.");
+            } catch (error) {
+                window.alert("Impossible de supprimer cet article.");
+            }
+        }
+
+        function handleCategorySelection() {
+            editingCategoryId = categorySelector.value;
+
+            if (!editingCategoryId) {
+                prepareNewCategoryForm();
+                return;
+            }
+
+            fillCategoryForm(editingCategoryId);
+        }
+
+        function fillCategoryForm(categoryId) {
+            const category = categories.find((item) => item.id === categoryId);
+
+            if (!category) {
+                prepareNewCategoryForm();
+                return;
+            }
+
+            editingCategoryId = category.id;
+            categorySelector.value = category.id;
+            categoryForm.elements.label.value = category.label;
+            categoryForm.elements.id.value = category.id;
+            deleteCategoryButton.disabled = categories.length <= 1;
+        }
+
+        function prepareNewCategoryForm() {
+            editingCategoryId = "";
+            categorySelector.value = "";
+            categoryForm.reset();
+            deleteCategoryButton.disabled = categories.length <= 1;
+        }
+
+        async function handleCategorySubmit(event) {
+            event.preventDefault();
+
+            const formData = new FormData(categoryForm);
+            const categoryPayload = {
+                label: String(formData.get("label") || "").trim(),
+                id: String(formData.get("id") || "").trim()
+                    .toLowerCase()
+                    .normalize("NFD")
+                    .replace(/[\u0300-\u036f]/g, "")
+                    .replace(/[^a-z0-9]+/g, "-")
+                    .replace(/^-+|-+$/g, "")
+            };
+
+            try {
+                if (editingCategoryId) {
+                    await window.CoopStockStore.updateCategory(editingCategoryId, categoryPayload);
+                    editingCategoryId = categoryPayload.id;
+                    window.alert("Categorie modifiee.");
+                } else {
+                    await window.CoopStockStore.addCategory(categoryPayload);
+                    editingCategoryId = categoryPayload.id;
+                    window.alert("Categorie ajoutee.");
+                }
+
+                await refreshPageData();
+            } catch (error) {
+                window.alert("Impossible d'enregistrer cette categorie.");
+            }
+        }
+
+        async function handleDeleteCategory() {
+            if (!editingCategoryId) {
+                return;
+            }
+
+            const confirmed = window.confirm("Supprimer cette categorie et deplacer ses articles dans une autre categorie ?");
+
+            if (!confirmed) {
+                return;
+            }
+
+            try {
+                await window.CoopStockStore.deleteCategory(editingCategoryId);
+                prepareNewCategoryForm();
+                await refreshPageData();
+                window.alert("Categorie supprimee.");
+            } catch (error) {
+                window.alert("Impossible de supprimer cette categorie.");
+            }
+        }
+
+        function updateCurrentDate() {
+            currentDateElement.textContent = new Intl.DateTimeFormat("fr-FR", {
+                weekday: "long",
+                day: "numeric",
+                month: "long"
+            }).format(new Date());
+        }
+
+        async function handleVisibilityChange() {
+            if (document.visibilityState === "visible") {
+                updateCurrentDate();
+                await refreshPageData();
+            }
+        }
+
+        function toggleMenu() {
+            const isOpen = sideMenu.classList.toggle("is-open");
+            sideMenu.setAttribute("aria-hidden", String(!isOpen));
+            menuToggleButton.setAttribute("aria-expanded", String(isOpen));
+        }
+
+        function closeMenu() {
+            sideMenu.classList.remove("is-open");
+            sideMenu.setAttribute("aria-hidden", "true");
+            menuToggleButton.setAttribute("aria-expanded", "false");
+        }
+
+        function handleEscapeToCloseMenu(event) {
+            if (event.key === "Escape" && sideMenu.classList.contains("is-open")) {
+                closeMenu();
+            }
+        }
+    </script>
+</body>
+</html>

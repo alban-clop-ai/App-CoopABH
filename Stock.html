@@ -33,69 +33,20 @@
         <a href="index1.html">Accueil</a>
         <a href="Vente.html">Vente</a>
         <a href="Stock.html">Stock</a>
-        <a href="profil.html">Profil</a>
+        <a href="paramètre.html">Parametre</a>
         <button type="button" class="side-menu-logout" id="logout-button">Deconnexion</button>
     </nav>
 
-    <main class="container stock-page">
+    <main class="container stock-page stock-page-full">
         <section class="stock-main-panel" aria-labelledby="stock-title">
             <div class="section-heading">
                 <h2 id="stock-title">Gestion du stock</h2>
-                <p>Le rayon alimente la vente dans l'accueil. La reserve sert a recharger le rayon.</p>
+                <p>Le rayon alimente la vente dans l'accueil. La reserve sert a recharger le rayon. L'ajout et la modification des articles se font maintenant dans Parametre.</p>
             </div>
 
             <div class="stock-summary" id="stock-summary"></div>
             <div class="stock-list" id="stock-list"></div>
         </section>
-
-        <aside class="stock-sidebar">
-            <div class="stock-form-card">
-                <div class="section-heading">
-                    <h2>Ajouter un article</h2>
-                    <p>Cree un nouveau produit avec son prix, sa categorie, sa photo et ses stocks.</p>
-                </div>
-
-                <form id="add-product-form" class="profile-form">
-                    <label class="form-field" for="product-name">
-                        <span>Nom de l'article</span>
-                        <input type="text" id="product-name" name="name" required placeholder="Exemple : Pepsi">
-                    </label>
-
-                    <label class="form-field" for="product-category">
-                        <span>Categorie</span>
-                        <select id="product-category" name="category" class="form-select" required>
-                            <option value="cafes">Cafes</option>
-                            <option value="boissons">Boissons</option>
-                            <option value="snacks">Snacks</option>
-                        </select>
-                    </label>
-
-                    <label class="form-field" for="product-price">
-                        <span>Prix</span>
-                        <input type="number" id="product-price" name="price" min="0" step="0.01" required placeholder="0.80">
-                    </label>
-
-                    <label class="form-field" for="product-shelf">
-                        <span>Stock rayon</span>
-                        <input type="number" id="product-shelf" name="stockShelf" min="0" step="1" value="0" required>
-                    </label>
-
-                    <label class="form-field" for="product-reserve">
-                        <span>Stock reserve</span>
-                        <input type="number" id="product-reserve" name="stockReserve" min="0" step="1" value="0" required>
-                    </label>
-
-                    <label class="form-field" for="product-image">
-                        <span>Lien image</span>
-                        <input type="url" id="product-image" name="image" placeholder="https://...">
-                    </label>
-
-                    <div class="profile-actions">
-                        <button type="submit" class="btn-vendu">Ajouter</button>
-                    </div>
-                </form>
-            </div>
-        </aside>
     </main>
 
     <script src="app-data.js"></script>
@@ -112,23 +63,13 @@
         const currentDateElement = document.getElementById("current-date");
         const stockSummary = document.getElementById("stock-summary");
         const stockList = document.getElementById("stock-list");
-        const addProductForm = document.getElementById("add-product-form");
-        
-        /* Noms des categories */
-        const categoryLabels = {
-            cafes: "Cafes",
-            boissons: "Boissons",
-            snacks: "Snacks"
-        };
+        const categoryLabels = {};
 
         /* Evenements de base */
         menuToggleButton.addEventListener("click", toggleMenu);
         menuCloseButton.addEventListener("click", closeMenu);
         sideMenuLinks.forEach((link) => link.addEventListener("click", closeMenu));
         document.addEventListener("keydown", handleEscapeToCloseMenu);
-        addProductForm.addEventListener("submit", async (event) => {
-            await handleAddProduct(event);
-        });
         document.addEventListener("visibilitychange", handleVisibilityChange);
         window.CoopStockStore.subscribe(() => {
             renderStockPage();
@@ -145,9 +86,18 @@
 
         /* Affichage complet de la page stock */
         async function renderStockPage() {
+            await updateCategoryLabels();
             const products = await getVisibleStockProducts();
             renderSummary(products);
             renderProductCards(products);
+        }
+
+        async function updateCategoryLabels() {
+            const categories = await window.CoopStockStore.getCategories();
+            Object.keys(categoryLabels).forEach((key) => delete categoryLabels[key]);
+            categories.forEach((category) => {
+                categoryLabels[category.id] = category.label;
+            });
         }
 
         /* Resume du stock */
@@ -298,27 +248,6 @@
         }
 
         /* Ajout d'un nouvel article */
-        async function handleAddProduct(event) {
-            event.preventDefault();
-
-            const formData = new FormData(addProductForm);
-
-            await window.CoopStockStore.addProduct({
-                name: String(formData.get("name") || "").trim(),
-                category: String(formData.get("category") || "snacks"),
-                price: Number(formData.get("price") || 0),
-                stockShelf: Number(formData.get("stockShelf") || 0),
-                stockReserve: Number(formData.get("stockReserve") || 0),
-                image: String(formData.get("image") || "").trim()
-            });
-
-            addProductForm.reset();
-            addProductForm.querySelector("#product-shelf").value = 0;
-            addProductForm.querySelector("#product-reserve").value = 0;
-            await renderStockPage();
-            window.alert("Article ajoute.");
-        }
-
         /* Fonctions utiles */
         function formatPrice(value) {
             return Number(value).toFixed(2);

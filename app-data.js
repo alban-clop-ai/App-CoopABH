@@ -1,6 +1,8 @@
 (function () {
     const STORAGE_KEY = "coopairbus-products-v2";
     const SALES_STORAGE_KEY = "coopairbus-sales-v1";
+    const CATEGORIES_STORAGE_KEY = "coopairbus-categories-v1";
+    const CATEGORIES_TABLE = "categories";
     const PRODUCTS_TABLE = "products";
     const SALES_TABLE = "sales";
     const SALE_ITEMS_TABLE = "sale_items";
@@ -107,7 +109,7 @@
         }
     ];
 
-    const categories = [
+    const DEFAULT_CATEGORIES = [
         { id: "cafes", label: "Cafes" },
         { id: "boissons", label: "Boissons" },
         { id: "snacks", label: "Snacks" }
@@ -117,6 +119,7 @@
     let initPromise = null;
     let productsCache = [];
     let salesCache = [];
+    let categoriesCache = [];
     let realtimeChannel = null;
     const listeners = new Set();
 
@@ -133,6 +136,13 @@
             stockShelf: Math.max(0, Number(product.stockShelf) || 0),
             stockReserve: Math.max(0, Number(product.stockReserve) || 0),
             image: String(product.image || "")
+        };
+    }
+
+    function normalizeCategory(category) {
+        return {
+            id: String(category.id || slugify(category.label || "categorie")),
+            label: String(category.label || "Categorie").trim() || "Categorie"
         };
     }
 
@@ -227,8 +237,31 @@
         }
     }
 
+    function readCategoriesLocal() {
+        const raw = localStorage.getItem(CATEGORIES_STORAGE_KEY);
+
+        if (!raw) {
+            return null;
+        }
+
+        try {
+            const parsed = JSON.parse(raw);
+            if (!Array.isArray(parsed)) {
+                return null;
+            }
+
+            return parsed.map(normalizeCategory);
+        } catch (error) {
+            return null;
+        }
+    }
+
     function writeProductsLocal(products) {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(products.map(normalizeProduct)));
+    }
+
+    function writeCategoriesLocal(categories) {
+        localStorage.setItem(CATEGORIES_STORAGE_KEY, JSON.stringify(categories.map(normalizeCategory)));
     }
 
     function readSalesLocal() {
@@ -281,6 +314,24 @@
         return migrateCafeProducts(DEFAULT_PRODUCTS.map(normalizeProduct));
     }
 
+    function getDefaultCategories() {
+        return DEFAULT_CATEGORIES.map(normalizeCategory);
+    }
+
+    function toCategoryRow(category) {
+        return {
+            id: category.id,
+            label: category.label
+        };
+    }
+
+    function fromCategoryRow(row) {
+        return normalizeCategory({
+            id: row.id,
+            label: row.label
+        });
+    }
+
     function toProductRow(product) {
         return {
             id: product.id,
@@ -320,6 +371,20 @@
         return migrateCafeProducts((data || []).map(fromProductRow));
     }
 
+    async function loadRemoteCategories() {
+        const client = getClient();
+        const { data, error } = await client
+            .from(CATEGORIES_TABLE)
+            .select("*")
+            .order("label", { ascending: true });
+
+        if (error) {
+            throw error;
+        }
+
+        return (data || []).map(fromCategoryRow);
+    }
+
     async function loadRemoteSales() {
         const client = getClient();
         const { data, error } = await client
@@ -344,6 +409,25 @@
 
     async function ensureRemoteSeed() {
         const client = getClient();
+        const { count: categoriesCount, error: categoriesError } = await client
+            .from(CATEGORIES_TABLE)
+            .select("id", { count: "exact", head: true });
+
+        if (categoriesError) {
+            throw categoriesError;
+        }
+
+        if ((categoriesCount || 0) === 0) {
+            const defaultCategoryRows = getDefaultCategories().map(toCategoryRow);
+            const { error: insertCategoriesError } = await client
+                .from(CATEGORIES_TABLE)
+                .upsert(defaultCategoryRows, { onConflict: "id" });
+
+            if (insertCategoriesError) {
+                throw insertCategoriesError;
+            }
+        }
+
         const { count, error } = await client
             .from(PRODUCTS_TABLE)
             .select("id", { count: "exact", head: true });
@@ -367,13 +451,16 @@
     }
 
     async function refreshRemoteData() {
-        const [products, sales] = await Promise.all([
+        const [categories, products, sales] = await Promise.all([
+            loadRemoteCategories(),
             loadRemoteProducts(),
             loadRemoteSales()
         ]);
 
+        categoriesCache = categories;
         productsCache = products;
         salesCache = sales;
+        writeCategoriesLocal(categories);
         writeProductsLocal(products);
         writeSalesLocal(sales);
     }
@@ -396,6 +483,7 @@
         const client = getClient();
         realtimeChannel = client
             .channel("coopairbus-live-data")
+            .on("postgres_changes", { event: "*", schema: "public", table: CATEGORIES_TABLE }, handleRealtimeChange)
             .on("postgres_changes", { event: "*", schema: "public", table: PRODUCTS_TABLE }, handleRealtimeChange)
             .on("postgres_changes", { event: "*", schema: "public", table: SALES_TABLE }, handleRealtimeChange)
             .on("postgres_changes", { event: "*", schema: "public", table: SALE_ITEMS_TABLE }, handleRealtimeChange)
@@ -422,8 +510,10 @@
 
         initPromise = (async () => {
             if (!hasRemoteStore()) {
+                categoriesCache = readCategoriesLocal() || getDefaultCategories();
                 productsCache = readProductsLocal() || getDefaultProducts();
                 salesCache = readSalesLocal();
+                writeCategoriesLocal(categoriesCache);
                 writeProductsLocal(productsCache);
                 writeSalesLocal(salesCache);
                 initialized = true;
@@ -446,6 +536,11 @@
     async function getProducts() {
         await init();
         return deepCopy(productsCache);
+    }
+
+    async function getCategories() {
+        await init();
+        return deepCopy(categoriesCache);
     }
 
     async function getSales() {
@@ -577,6 +672,7 @@
 
     async function addProduct(product) {
         await init();
+        const categories = await getCategories();
         const products = await getProducts();
         let nextId = slugify(product.name);
 
@@ -586,6 +682,7 @@
 
         const newProduct = normalizeProduct({
             ...product,
+            category: categories.some((category) => category.id === product.category) ? product.category : categories[0]?.id || "snacks",
             id: nextId
         });
 
@@ -628,6 +725,132 @@
         await refreshRemoteData();
         notifyListeners();
         return getProducts();
+    }
+
+    async function addCategory(category) {
+        await init();
+        const normalizedCategory = normalizeCategory(category);
+
+        if (!hasRemoteStore()) {
+            categoriesCache.push(normalizedCategory);
+            writeCategoriesLocal(categoriesCache);
+            notifyListeners();
+            return deepCopy(normalizedCategory);
+        }
+
+        const client = getClient();
+        const { error } = await client.from(CATEGORIES_TABLE).insert(toCategoryRow(normalizedCategory));
+
+        if (error) {
+            throw error;
+        }
+
+        await refreshRemoteData();
+        notifyListeners();
+        return deepCopy(normalizedCategory);
+    }
+
+    async function updateCategory(categoryId, updates) {
+        await init();
+        const currentCategory = categoriesCache.find((category) => category.id === categoryId);
+
+        if (!currentCategory) {
+            throw new Error("Categorie introuvable.");
+        }
+
+        const nextCategoryId = String(updates.id || categoryId);
+        const nextLabel = String(updates.label || currentCategory.label).trim() || currentCategory.label;
+
+        if (!hasRemoteStore()) {
+            categoriesCache = categoriesCache.map((category) => {
+                if (category.id !== categoryId) {
+                    return category;
+                }
+
+                return normalizeCategory({
+                    id: nextCategoryId,
+                    label: nextLabel
+                });
+            });
+
+            productsCache = productsCache.map((product) => {
+                if (product.category !== categoryId) {
+                    return product;
+                }
+
+                return normalizeProduct({
+                    ...product,
+                    category: nextCategoryId
+                });
+            });
+
+            writeCategoriesLocal(categoriesCache);
+            writeProductsLocal(productsCache);
+            notifyListeners();
+            return true;
+        }
+
+        const client = getClient();
+        const { error } = await client.rpc("rename_category", {
+            p_old_id: categoryId,
+            p_new_id: nextCategoryId,
+            p_new_label: nextLabel
+        });
+
+        if (error) {
+            throw error;
+        }
+
+        await refreshRemoteData();
+        notifyListeners();
+        return true;
+    }
+
+    async function deleteCategory(categoryId) {
+        await init();
+
+        if (categoriesCache.length <= 1) {
+            throw new Error("Il faut garder au moins une categorie.");
+        }
+
+        const fallbackCategory = categoriesCache.find((category) => category.id !== categoryId);
+
+        if (!fallbackCategory) {
+            throw new Error("Categorie de remplacement introuvable.");
+        }
+
+        if (!hasRemoteStore()) {
+            productsCache = productsCache.map((product) => {
+                if (product.category !== categoryId) {
+                    return product;
+                }
+
+                return normalizeProduct({
+                    ...product,
+                    category: fallbackCategory.id
+                });
+            });
+
+            categoriesCache = categoriesCache.filter((category) => category.id !== categoryId);
+            writeProductsLocal(productsCache);
+            writeCategoriesLocal(categoriesCache);
+            notifyListeners();
+            return true;
+        }
+
+        const client = getClient();
+        const { error } = await client.rpc("delete_category_and_reassign_products", {
+            p_category_id: categoryId,
+            p_fallback_category_id: fallbackCategory.id
+        });
+
+        if (error) {
+            throw error;
+        }
+
+        await refreshRemoteData();
+        notifyListeners();
+        return true;
     }
 
     async function recordSale(sale) {
@@ -728,11 +951,12 @@
     }
 
     window.CoopStockStore = {
-        categories,
+        categories: DEFAULT_CATEGORIES.map(normalizeCategory),
         storageKey: STORAGE_KEY,
         salesStorageKey: SALES_STORAGE_KEY,
         init,
         subscribe,
+        getCategories,
         getProducts,
         saveProducts,
         updateProduct,
@@ -741,6 +965,9 @@
         transferShelfToReserve,
         addProduct,
         deleteProduct,
+        addCategory,
+        updateCategory,
+        deleteCategory,
         getSales,
         getSalesByDate,
         recordSale,
