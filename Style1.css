@@ -1,3 +1,5 @@
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;500;700&family=Inter:wght@400;500;600;700&family=Josefin+Sans:wght@500;600;700&family=Neuton:wght@400;700&family=Playfair+Display:wght@600;700&family=Raleway:wght@500;600;700&family=Rubik:wght@400;500;700&display=swap");
+
 :root {
     --color-primary: #d1591e;
     --color-primary-dark: #8c2f11;
@@ -23,7 +25,7 @@
 body {
     margin: 0;
     min-height: 100vh;
-    font-family: Arial, sans-serif;
+    font-family: "DM Sans", "Inter", sans-serif;
     color: var(--color-text);
     background-color: #f4f4f4;
     background-image: url("background2.jpg");
@@ -47,10 +49,11 @@ a:hover {
     position: sticky;
     top: 0;
     z-index: 10;
-    display: flex;
+    display: grid;
+    grid-template-columns: auto auto minmax(0, 1fr) auto auto;
+    grid-template-areas: "menu date title user profile";
     align-items: center;
-    justify-content: space-between;
-    gap: 16px;
+    gap: 12px;
     padding: 16px 24px;
     color: #fff;
     background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
@@ -58,18 +61,23 @@ a:hover {
 }
 
 .page-header h1 {
-    flex: 1;
+    grid-area: title;
     margin: 0;
-    font-size: clamp(1.3rem, 2vw, 1.8rem);
+    font-family: "Playfair Display", "Neuton", serif;
+    font-size: clamp(1.55rem, 2.4vw, 2.1rem);
+    font-weight: 700;
+    letter-spacing: 0.04em;
     text-align: center;
 }
 
 .header-date {
+    grid-area: date;
     min-width: 170px;
     padding: 10px 12px;
     border-radius: 999px;
     color: #fff;
-    font-size: 0.95rem;
+    font-family: "Inter", "DM Sans", sans-serif;
+    font-size: 0.88rem;
     font-weight: 700;
     text-align: center;
     text-transform: capitalize;
@@ -77,14 +85,17 @@ a:hover {
 }
 
 .header-profile-name {
-    min-width: 170px;
-    padding: 10px 12px;
-    border-radius: 999px;
+    grid-area: user;
+    justify-self: end;
+    max-width: 180px;
+    padding: 0 2px 0 0;
     color: #fff;
-    font-size: 0.95rem;
-    font-weight: 700;
-    text-align: center;
-    background: rgba(255, 255, 255, 0.14);
+    font-family: "Inter", "DM Sans", sans-serif;
+    font-size: 0.78rem;
+    font-weight: 600;
+    line-height: 1.2;
+    text-align: right;
+    opacity: 0.92;
 }
 
 .menu-btn,
@@ -99,6 +110,7 @@ a:hover {
 }
 
 .menu-btn {
+    grid-area: menu;
     width: 44px;
     height: 44px;
     font-size: 1.7rem;
@@ -114,10 +126,13 @@ a:hover {
 }
 
 .profile-link {
+    grid-area: profile;
     white-space: nowrap;
     padding: 10px 14px;
     border-radius: 999px;
     color: #fff;
+    font-family: "Rubik", "Inter", sans-serif;
+    font-size: 0.95rem;
     font-weight: 700;
     text-decoration: none;
     background: rgba(255, 255, 255, 0.16);
@@ -148,6 +163,7 @@ a:hover {
     padding: 12px 14px;
     border-radius: var(--radius-sm);
     color: #fff;
+    font-family: "Rubik", "Inter", sans-serif;
     text-decoration: none;
     font-size: 1rem;
     font-weight: 600;
@@ -218,12 +234,14 @@ a:hover {
 
 .section-heading h2 {
     margin: 0 0 6px;
+    font-family: "Raleway", "Inter", sans-serif;
     font-size: 1.35rem;
 }
 
 .section-heading p {
     margin: 0;
     color: var(--color-muted);
+    font-family: "Inter", "DM Sans", sans-serif;
     font-size: 0.95rem;
 }
 
@@ -313,6 +331,7 @@ a:hover {
 }
 
 .article-name {
+    font-family: "Rubik", "Inter", sans-serif;
     font-size: 1rem;
     font-weight: 700;
 }
@@ -353,6 +372,7 @@ a:hover {
 }
 
 .cart-item-label {
+    font-family: "Rubik", "Inter", sans-serif;
     font-weight: 700;
 }
 
@@ -397,6 +417,7 @@ a:hover {
     border: none;
     border-radius: var(--radius-md);
     color: #fff;
+    font-family: "Rubik", "Inter", sans-serif;
     font-size: 1.05rem;
     font-weight: 700;
     background: linear-gradient(135deg, var(--color-success), var(--color-success-dark));
@@ -555,6 +576,7 @@ a:hover {
     display: flex;
     flex-direction: column;
     gap: 8px;
+    font-family: "Inter", "DM Sans", sans-serif;
     font-weight: 700;
 }
 
@@ -606,6 +628,7 @@ a:hover {
     border: 1px solid rgba(22, 32, 42, 0.16);
     border-radius: var(--radius-md);
     color: var(--color-text);
+    font-family: "Rubik", "Inter", sans-serif;
     font-size: 1rem;
     font-weight: 700;
     background: rgba(255, 255, 255, 0.85);
@@ -797,6 +820,7 @@ a:hover {
 
 .summary-label {
     color: var(--color-muted);
+    font-family: "Inter", "DM Sans", sans-serif;
     font-size: 0.92rem;
 }
 
@@ -961,6 +985,16 @@ a:hover {
 }
 
 @media (max-width: 640px) {
+    .page-header {
+        grid-template-columns: auto 1fr auto;
+        grid-template-areas:
+            "menu title profile"
+            "date date date"
+            "user user user";
+        gap: 10px;
+        justify-items: stretch;
+    }
+
     .profile-card {
         padding: 18px;
     }
@@ -977,6 +1011,13 @@ a:hover {
     .header-profile-name,
     .header-date {
         min-width: auto;
+    }
+
+    .header-date,
+    .header-profile-name {
+        justify-self: stretch;
+        max-width: none;
+        text-align: center;
     }
 
     .category-title,
