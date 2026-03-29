@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Profil utilisateur</title>
     <link rel="stylesheet" href="Style1.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="auth-config.js"></script>
+    <script src="auth.js"></script>
 </head>
 <body>
     <header class="page-header">
@@ -29,6 +32,7 @@
         <a href="Vente.html">Vente</a>
         <a href="Stock.html">Stock</a>
         <a href="profil.html">Profil</a>
+        <button type="button" class="side-menu-logout" id="logout-button">Deconnexion</button>
     </nav>
 
     <main class="container profile-container">
@@ -85,6 +89,9 @@
     </main>
 
     <script>
+        window.CoopAuth.requireAuth();
+        window.CoopAuth.attachLogoutButton();
+
         const menuToggleButton = document.getElementById("menu-toggle");
         const menuCloseButton = document.getElementById("menu-close");
         const currentDateElement = document.getElementById("current-date");

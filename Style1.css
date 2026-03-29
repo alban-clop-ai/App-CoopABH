@@ -148,6 +148,25 @@ a:hover {
     outline: none;
 }
 
+.side-menu-logout {
+    margin-top: auto;
+    padding: 12px 14px;
+    border: 1px solid rgba(255, 255, 255, 0.24);
+    border-radius: var(--radius-sm);
+    color: #fff;
+    font: inherit;
+    font-weight: 700;
+    text-align: left;
+    background: rgba(255, 255, 255, 0.12);
+    cursor: pointer;
+}
+
+.side-menu-logout:hover,
+.side-menu-logout:focus-visible {
+    background: rgba(255, 255, 255, 0.2);
+    outline: none;
+}
+
 .close-btn {
     position: absolute;
     top: 18px;

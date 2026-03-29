@@ -6,6 +6,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Connexion</title>
     <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="auth-config.js"></script>
+    <script src="auth.js"></script>
 </head>
 <body>
 <header>
@@ -16,13 +19,13 @@
         <div class="login-visual">
             <img src="logo-login.jpg" alt="Logo de connexion" class="login-logo">
         </div>
-        <form>
+        <form id="login-form">
             <h2>Connexion</h2>
 
-            <input type="text" id="username" name="username" placeholder="Identifiant" required>
+            <input type="email" id="username" name="username" placeholder="Email" autocomplete="email" required>
 
             <div class="password-container">
-                <input type="password" id="password" name="password" placeholder="Mot de passe" required>
+                <input type="password" id="password" name="password" placeholder="Mot de passe" autocomplete="current-password" required>
                 <span class="toggle-password"
                     onmousedown="showPassword()"
                     onmouseup="hidePassword()"
@@ -34,7 +37,7 @@
             </div>
 
             <p class="login-error" aria-live="polite"></p>
-            <button type="button">Se connecter</button>
+            <button type="submit">Se connecter</button>
         </form>
     </div>
 
@@ -48,6 +51,8 @@
     function hidePassword() {
         passwordInput.type = "password";
     }
+
+    window.CoopAuth.initLoginPage();
     </script>
 </main>
 
