@@ -61,6 +61,34 @@ async function getProfile() {
     }
 }
 
+async function getAllProfiles() {
+    if (!(window.CoopAuth && window.CoopAuth.hasValidConfig())) {
+        const localProfile = getStoredProfile();
+        return localProfile ? [localProfile] : [];
+    }
+
+    try {
+        const client = window.CoopAuth.getClient();
+        const { data, error } = await client
+            .from("profiles")
+            .select("id, email, first_name, last_name, photo");
+
+        if (error) {
+            return [];
+        }
+
+        return (data || []).map((profile) => ({
+            id: String(profile.id || ""),
+            email: String(profile.email || "").trim(),
+            firstName: String(profile.first_name || "").trim(),
+            lastName: String(profile.last_name || "").trim(),
+            photo: String(profile.photo || "")
+        }));
+    } catch (error) {
+        return [];
+    }
+}
+
 function getProfileDisplayName(profile) {
     const firstName = String(profile?.firstName || "").trim();
     const lastName = String(profile?.lastName || "").trim();
@@ -83,6 +111,7 @@ async function renderHeaderProfileName() {
 window.CoopAppUi = {
     renderHeaderProfileName,
     getProfile,
+    getAllProfiles,
     getProfileDisplayName,
     storeProfileLocally
 };

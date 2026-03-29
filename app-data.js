@@ -307,11 +307,38 @@
     async function getCurrentUserLabel() {
         const session = await window.CoopAuth.getSession();
         const email = session?.user?.email || "";
+        const userId = session?.user?.id || "";
         const metadataName = String(
             session?.user?.user_metadata?.full_name ||
             session?.user?.user_metadata?.name ||
             ""
         ).trim();
+
+        if (userId) {
+            try {
+                const client = getClient();
+                const { data, error } = await client
+                    .from("profiles")
+                    .select("first_name, last_name")
+                    .eq("id", userId)
+                    .maybeSingle();
+
+                if (!error && data) {
+                    const firstName = String(data.first_name || "").trim();
+                    const lastName = String(data.last_name || "").trim();
+                    const fullName = `${firstName} ${lastName}`.trim();
+
+                    if (fullName) {
+                        return {
+                            email,
+                            label: fullName
+                        };
+                    }
+                }
+            } catch (error) {
+                console.error(error);
+            }
+        }
 
         return {
             email,

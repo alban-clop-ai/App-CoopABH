@@ -123,10 +123,22 @@
         /* Affichage complet */
         async function renderSalesPage() {
             const selectedDate = salesDateInput.value || getTodayDate();
-            const salesForDay = await window.CoopStockStore.getSalesByDate(selectedDate);
+            const [salesForDay, profiles] = await Promise.all([
+                window.CoopStockStore.getSalesByDate(selectedDate),
+                window.CoopAppUi.getAllProfiles()
+            ]);
+            const profileNameByEmail = new Map(
+                profiles
+                    .filter((profile) => profile.email)
+                    .map((profile) => [profile.email.toLowerCase(), window.CoopAppUi.getProfileDisplayName(profile)])
+            );
+            const enrichedSalesForDay = salesForDay.map((sale) => ({
+                ...sale,
+                displayAuthor: profileNameByEmail.get(String(sale.createdByEmail || "").toLowerCase()) || sale.createdByLabel || String(sale.createdByEmail || "").split("@")[0] || "Utilisateur"
+            }));
 
-            renderDailySummary(salesForDay);
-            renderDailyDetails(salesForDay);
+            renderDailySummary(enrichedSalesForDay);
+            renderDailyDetails(enrichedSalesForDay);
             await renderMonthQuickView();
         }
 
@@ -176,7 +188,7 @@
                     <div class="sales-item-main">
                         <div>
                             <h3>Ticket ${formatTicketTime(sale.createdAt)}</h3>
-                            <p>${sale.items.length} article(s) sur ce ticket${sale.createdByLabel ? ` - ${sale.createdByLabel}` : ""}</p>
+                            <p>${sale.items.length} article(s) sur ce ticket${sale.displayAuthor ? ` - ${sale.displayAuthor}` : ""}</p>
                         </div>
                         <div class="sales-item-actions">
                             <strong>${formatPrice(sale.total)} EUR</strong>
