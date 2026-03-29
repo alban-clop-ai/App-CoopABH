@@ -76,6 +76,17 @@ a:hover {
     background: rgba(255, 255, 255, 0.14);
 }
 
+.header-profile-name {
+    min-width: 170px;
+    padding: 10px 12px;
+    border-radius: 999px;
+    color: #fff;
+    font-size: 0.95rem;
+    font-weight: 700;
+    text-align: center;
+    background: rgba(255, 255, 255, 0.14);
+}
+
 .menu-btn,
 .close-btn {
     display: inline-flex;
@@ -688,6 +699,12 @@ a:hover {
     gap: 18px;
 }
 
+.sales-item-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
 .sales-item-main h3 {
     margin: 0 0 6px;
 }
@@ -695,6 +712,31 @@ a:hover {
 .sales-item-main p {
     margin: 0;
     color: var(--color-muted);
+}
+
+.sales-ticket-items {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin: 16px 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+.sales-ticket-items li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: var(--radius-sm);
+    background: rgba(255, 255, 255, 0.7);
+    border: 1px solid var(--color-border);
+}
+
+.sales-cancel-btn {
+    width: auto;
+    padding: 10px 14px;
 }
 
 .month-sales-list {
@@ -932,6 +974,11 @@ a:hover {
         flex-direction: column;
     }
 
+    .header-profile-name,
+    .header-date {
+        min-width: auto;
+    }
+
     .category-title,
     .stock-item-header,
     .stock-item-main {
@@ -954,6 +1001,17 @@ a:hover {
     .sales-item-main {
         flex-direction: column;
         align-items: flex-start;
+    }
+
+    .sales-item-actions,
+    .sales-ticket-items li {
+        width: 100%;
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .sales-cancel-btn {
+        width: 100%;
     }
 
     .stock-item-image {

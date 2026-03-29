@@ -8,6 +8,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="auth-config.js"></script>
     <script src="auth.js"></script>
+    <script src="app-ui.js"></script>
 </head>
 <body>
     <header class="page-header">
@@ -21,6 +22,7 @@
         >
             ☰
         </button>
+        <div class="header-profile-name" id="header-profile-name">Utilisateur</div>
         <div class="header-date" id="current-date" aria-label="Date du jour"></div>
         <h1>Cooperative Airbus</h1>
         <a href="profil.html" class="profile-link">Mon profil</a>
@@ -100,6 +102,7 @@
     <script>
         window.CoopAuth.requireAuth();
         window.CoopAuth.attachLogoutButton();
+        window.CoopAppUi.renderHeaderProfileName();
 
         /* Elements de la page */
         const menuToggleButton = document.getElementById("menu-toggle");

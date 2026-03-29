@@ -198,9 +198,11 @@
     function normalizeSaleItem(item) {
         return {
             id: String(item.id),
+            sourceProductId: String(item.sourceProductId || item.id),
             name: String(item.name),
             qty: Math.max(0, Number(item.qty) || 0),
-            price: Number(item.price) || 0
+            price: Number(item.price) || 0,
+            stockStep: Math.max(1, Number(item.stockStep) || 1)
         };
     }
 
@@ -390,6 +392,26 @@
         return getSales().filter((sale) => sale.date === date);
     }
 
+    function deleteSale(saleId) {
+        const sales = readSales();
+        const saleToDelete = sales.find((sale) => sale.id === saleId);
+
+        if (!saleToDelete) {
+            throw new Error("Vente introuvable.");
+        }
+
+        saleToDelete.items.forEach((item) => {
+            changeStock(item.sourceProductId || item.id, {
+                stockShelfDelta: (Number(item.qty) || 0) * (Number(item.stockStep) || 1)
+            });
+        });
+
+        const filteredSales = sales.filter((sale) => sale.id !== saleId);
+        writeSales(filteredSales);
+
+        return deepCopy(saleToDelete);
+    }
+
     window.CoopStockStore = {
         categories: [
             { id: "cafes", label: "Cafes" },
@@ -408,6 +430,7 @@
         deleteProduct,
         getSales,
         getSalesByDate,
-        recordSale
+        recordSale,
+        deleteSale
     };
 })();

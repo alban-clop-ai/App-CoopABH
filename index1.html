@@ -8,6 +8,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="auth-config.js"></script>
     <script src="auth.js"></script>
+    <script src="app-ui.js"></script>
 </head>
 <body>
     <header class="page-header">
@@ -21,6 +22,7 @@
         >
             ☰
         </button>
+        <div class="header-profile-name" id="header-profile-name">Utilisateur</div>
         <div class="header-date" id="current-date" aria-label="Date du jour"></div>
         <h1>Cooperative Airbus</h1>
         <a href="profil.html" class="profile-link">Mon profil</a>
@@ -70,6 +72,7 @@
     <script>
         window.CoopAuth.requireAuth();
         window.CoopAuth.attachLogoutButton();
+        window.CoopAppUi.renderHeaderProfileName();
 
         const categorySections = document.getElementById("category-sections");
         const cartList = document.getElementById("cart-list");
@@ -225,9 +228,11 @@
 
             const saleItems = Object.values(cart).map((item) => ({
                 id: item.id,
+                sourceProductId: item.sourceProductId,
                 name: item.name,
                 qty: item.qty,
-                price: item.price
+                price: item.price,
+                stockStep: item.stockStep
             }));
 
             const saleTotal = saleItems.reduce((sum, item) => sum + (item.qty * item.price), 0);

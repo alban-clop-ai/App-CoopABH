@@ -8,6 +8,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="auth-config.js"></script>
     <script src="auth.js"></script>
+    <script src="app-ui.js"></script>
 </head>
 <body>
     <header class="page-header">
@@ -21,6 +22,7 @@
         >
             ☰
         </button>
+        <div class="header-profile-name" id="header-profile-name">Utilisateur</div>
         <div class="header-date" id="current-date" aria-label="Date du jour"></div>
         <h1>Cooperative Airbus</h1>
         <a href="profil.html" class="profile-link">Mon profil</a>
@@ -91,6 +93,7 @@
     <script>
         window.CoopAuth.requireAuth();
         window.CoopAuth.attachLogoutButton();
+        window.CoopAppUi.renderHeaderProfileName();
 
         const menuToggleButton = document.getElementById("menu-toggle");
         const menuCloseButton = document.getElementById("menu-close");
@@ -137,6 +140,7 @@
             };
 
             localStorage.setItem(storageKey, JSON.stringify(profile));
+            window.CoopAppUi.renderHeaderProfileName();
             updateProfilePreview();
             window.alert("Profil enregistre.");
         }
@@ -212,6 +216,7 @@
             photoInput.value = "";
             profilePhotoData = "";
             localStorage.removeItem(storageKey);
+            window.CoopAppUi.renderHeaderProfileName();
             updateProfilePreview();
         }
 

@@ -8,6 +8,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="auth-config.js"></script>
     <script src="auth.js"></script>
+    <script src="app-ui.js"></script>
 </head>
 <body>
     <header class="page-header">
@@ -21,6 +22,7 @@
         >
             ☰
         </button>
+        <div class="header-profile-name" id="header-profile-name">Utilisateur</div>
         <div class="header-date" id="current-date" aria-label="Date du jour"></div>
         <h1>Cooperative Airbus</h1>
         <a href="profil.html" class="profile-link">Mon profil</a>
@@ -69,6 +71,7 @@
     <script>
         window.CoopAuth.requireAuth();
         window.CoopAuth.attachLogoutButton();
+        window.CoopAppUi.renderHeaderProfileName();
 
         /* Elements de la page */
         const menuToggleButton = document.getElementById("menu-toggle");
@@ -80,6 +83,7 @@
         const salesSummary = document.getElementById("sales-summary");
         const salesList = document.getElementById("sales-list");
         const monthSalesList = document.getElementById("month-sales-list");
+        const CASH_FLOAT_AMOUNT = 32;
 
         /* Evenements de base */
         menuToggleButton.addEventListener("click", toggleMenu);
@@ -116,8 +120,8 @@
                     <strong>${details.totalQuantity}</strong>
                 </article>
                 <article class="summary-card">
-                    <span class="summary-label">References vendues</span>
-                    <strong>${details.items.length}</strong>
+                    <span class="summary-label">Solde total caisse</span>
+                    <strong>${formatPrice(details.totalAmount + CASH_FLOAT_AMOUNT)} EUR</strong>
                 </article>
                 <article class="summary-card">
                     <span class="summary-label">Solde total du jour</span>
@@ -136,19 +140,36 @@
                 return;
             }
 
-            details.items.forEach((item) => {
+            salesForDay
+                .slice()
+                .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+                .forEach((sale) => {
                 const row = document.createElement("article");
                 row.className = "sales-item-card";
+                const itemsMarkup = sale.items.map((item) => `
+                    <li>
+                        <span>${item.name}</span>
+                        <span>${item.qty} x ${formatPrice(item.price)} EUR</span>
+                    </li>
+                `).join("");
                 row.innerHTML = `
                     <div class="sales-item-main">
                         <div>
-                            <h3>${item.name}</h3>
-                            <p>${item.qty} article(s) vendu(s)</p>
+                            <h3>Ticket ${formatTicketTime(sale.createdAt)}</h3>
+                            <p>${sale.items.length} article(s) sur ce ticket</p>
                         </div>
-                        <strong>${formatPrice(item.total)} EUR</strong>
+                        <div class="sales-item-actions">
+                            <strong>${formatPrice(sale.total)} EUR</strong>
+                            <button type="button" class="secondary-btn sales-cancel-btn" data-sale-id="${sale.id}">Annuler</button>
+                        </div>
                     </div>
+                    <ul class="sales-ticket-items">${itemsMarkup}</ul>
                 `;
                 salesList.appendChild(row);
+            });
+
+            salesList.querySelectorAll(".sales-cancel-btn").forEach((button) => {
+                button.addEventListener("click", handleSaleCancellation);
             });
         }
 
@@ -216,6 +237,23 @@
             };
         }
 
+        function handleSaleCancellation(event) {
+            const saleId = event.currentTarget.dataset.saleId;
+            const confirmed = window.confirm("Annuler ce ticket et remettre les articles dans le stock ?");
+
+            if (!confirmed) {
+                return;
+            }
+
+            try {
+                window.CoopStockStore.deleteSale(saleId);
+                renderSalesPage();
+                window.alert("Ticket annule.");
+            } catch (error) {
+                window.alert("Impossible d'annuler ce ticket.");
+            }
+        }
+
         /* Fonctions utiles */
         function getTodayDate() {
             const today = new Date();
@@ -234,6 +272,13 @@
                 day: "numeric",
                 month: "short"
             }).format(new Date(`${date}T12:00:00`));
+        }
+
+        function formatTicketTime(dateTime) {
+            return new Intl.DateTimeFormat("fr-FR", {
+                hour: "2-digit",
+                minute: "2-digit"
+            }).format(new Date(dateTime));
         }
 
         function updateCurrentDate() {
