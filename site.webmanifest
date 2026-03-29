@@ -7,10 +7,16 @@
     "theme_color": "#d1591e",
     "icons": [
         {
-            "src": "logo-login.jpg",
+            "src": "app-icon.png",
             "sizes": "512x512",
-            "type": "image/jpeg",
+            "type": "image/png",
             "purpose": "any"
+        },
+        {
+            "src": "app-icon.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
         }
     ]
 }
