@@ -81,9 +81,15 @@
                 </div>
 
                 <label class="form-field" for="product-image">
-                    <span>Lien image</span>
-                    <input type="url" id="product-image" name="image" placeholder="https://...">
+                    <span>Photo de l'article</span>
+                    <input type="file" id="product-image" name="imageFile" accept="image/*" class="hidden-file-input">
+                    <label for="product-image" class="settings-upload-btn">Parcourir</label>
                 </label>
+
+                <div class="settings-image-preview-card">
+                    <img id="product-image-preview" class="settings-image-preview hidden" alt="Apercu de l'article">
+                    <div id="product-image-placeholder" class="settings-image-placeholder">Aucune image selectionnee</div>
+                </div>
 
                 <div class="profile-actions">
                     <button type="submit" class="btn-vendu" id="save-product-button">Enregistrer l'article</button>
@@ -147,6 +153,9 @@
         const productCategorySelect = document.getElementById("product-category");
         const deleteProductButton = document.getElementById("delete-product-button");
         const newProductButton = document.getElementById("new-product-button");
+        const productImageInput = document.getElementById("product-image");
+        const productImagePreview = document.getElementById("product-image-preview");
+        const productImagePlaceholder = document.getElementById("product-image-placeholder");
 
         const categorySelector = document.getElementById("category-selector");
         const categoryForm = document.getElementById("category-form");
@@ -158,6 +167,7 @@
         let categories = [];
         let editingProductId = "";
         let editingCategoryId = "";
+        let productImageData = "";
 
         menuToggleButton.addEventListener("click", toggleMenu);
         menuCloseButton.addEventListener("click", closeMenu);
@@ -172,6 +182,7 @@
         deleteCategoryButton.addEventListener("click", handleDeleteCategory);
         productForm.addEventListener("submit", handleProductSubmit);
         categoryForm.addEventListener("submit", handleCategorySubmit);
+        productImageInput.addEventListener("change", handleProductImageSelection);
         window.CoopStockStore.subscribe(() => {
             refreshPageData();
         });
@@ -267,7 +278,9 @@
             productForm.elements.price.value = product.price;
             productForm.elements.stockShelf.value = product.stockShelf;
             productForm.elements.stockReserve.value = product.stockReserve;
-            productForm.elements.image.value = product.image;
+            productImageInput.value = "";
+            productImageData = product.image || "";
+            renderProductImagePreview();
             deleteProductButton.disabled = false;
         }
 
@@ -278,6 +291,9 @@
             productForm.elements.stockShelf.value = 0;
             productForm.elements.stockReserve.value = 0;
             productForm.elements.category.value = categories[0]?.id || "";
+            productImageInput.value = "";
+            productImageData = "";
+            renderProductImagePreview();
             deleteProductButton.disabled = true;
         }
 
@@ -291,7 +307,7 @@
                 price: Number(formData.get("price") || 0),
                 stockShelf: Number(formData.get("stockShelf") || 0),
                 stockReserve: Number(formData.get("stockReserve") || 0),
-                image: String(formData.get("image") || "").trim()
+                image: productImageData
             };
 
             try {
@@ -329,6 +345,40 @@
             } catch (error) {
                 window.alert("Impossible de supprimer cet article.");
             }
+        }
+
+        function handleProductImageSelection(event) {
+            const [file] = event.target.files;
+
+            if (!file) {
+                return;
+            }
+
+            if (!file.type.startsWith("image/")) {
+                window.alert("Selectionne une image valide.");
+                productImageInput.value = "";
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.addEventListener("load", () => {
+                productImageData = String(reader.result || "");
+                renderProductImagePreview();
+            });
+            reader.readAsDataURL(file);
+        }
+
+        function renderProductImagePreview() {
+            if (productImageData) {
+                productImagePreview.src = productImageData;
+                productImagePreview.classList.remove("hidden");
+                productImagePlaceholder.classList.add("hidden");
+                return;
+            }
+
+            productImagePreview.removeAttribute("src");
+            productImagePreview.classList.add("hidden");
+            productImagePlaceholder.classList.remove("hidden");
         }
 
         function handleCategorySelection() {

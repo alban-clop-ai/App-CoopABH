@@ -845,6 +845,51 @@ a:hover {
     font-size: 1.05rem;
 }
 
+.settings-upload-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: fit-content;
+    padding: 12px 18px;
+    border-radius: var(--radius-md);
+    color: #fff;
+    font-family: "Rubik", "Inter", sans-serif;
+    font-weight: 700;
+    text-decoration: none;
+    background: linear-gradient(135deg, var(--color-secondary), var(--color-secondary-dark));
+    cursor: pointer;
+}
+
+.settings-upload-btn:hover,
+.settings-upload-btn:focus-visible {
+    outline: none;
+    filter: brightness(1.04);
+}
+
+.settings-image-preview-card {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 220px;
+    padding: 16px;
+    border: 1px dashed var(--color-border);
+    border-radius: var(--radius-lg);
+    background: rgba(255, 255, 255, 0.7);
+}
+
+.settings-image-preview {
+    width: 100%;
+    max-height: 280px;
+    object-fit: contain;
+    border-radius: var(--radius-md);
+}
+
+.settings-image-placeholder {
+    color: var(--color-muted);
+    font-family: "Inter", "DM Sans", sans-serif;
+    text-align: center;
+}
+
 .settings-badge-list {
     display: flex;
     flex-wrap: wrap;
