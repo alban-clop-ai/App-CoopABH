@@ -98,14 +98,18 @@
         const categoryStyles = {
             cafes: "article-coffee",
             boissons: "article-drink",
-            snacks: "article-snack"
+            snacks: "article-snack",
+            vetements: "article-snack"
         };
 
         const fallbackCategoryLabels = {
             cafes: "Cafes",
             boissons: "Boissons",
-            snacks: "Snacks"
+            snacks: "Snacks",
+            vetements: "Vetements"
         };
+
+        const categoryDisplayOrder = ["cafes", "boissons", "snacks", "vetements"];
 
         let cart = {};
 
@@ -131,7 +135,7 @@
 
         async function renderProducts() {
             const products = await getStorefrontProducts();
-            const categories = await window.CoopStockStore.getCategories();
+            const categories = sortCategoriesForHome(await window.CoopStockStore.getCategories());
 
             categorySections.innerHTML = "";
 
@@ -180,6 +184,21 @@
 
                 section.append(title, articlesGrid);
                 categorySections.appendChild(section);
+            });
+        }
+
+        function sortCategoriesForHome(categories) {
+            return categories.slice().sort((leftCategory, rightCategory) => {
+                const leftIndex = categoryDisplayOrder.indexOf(leftCategory.id);
+                const rightIndex = categoryDisplayOrder.indexOf(rightCategory.id);
+                const safeLeftIndex = leftIndex === -1 ? Number.MAX_SAFE_INTEGER : leftIndex;
+                const safeRightIndex = rightIndex === -1 ? Number.MAX_SAFE_INTEGER : rightIndex;
+
+                if (safeLeftIndex !== safeRightIndex) {
+                    return safeLeftIndex - safeRightIndex;
+                }
+
+                return String(leftCategory.label || leftCategory.id).localeCompare(String(rightCategory.label || rightCategory.id), "fr");
             });
         }
 
