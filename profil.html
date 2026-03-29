@@ -122,7 +122,6 @@
         const displaySubtitle = document.getElementById("display-subtitle");
         const resetProfileButton = document.getElementById("reset-profile");
 
-        const storageKey = "coopairbus-user-profile";
         let profilePhotoData = "";
 
         menuToggleButton.addEventListener("click", toggleMenu);
@@ -138,10 +137,14 @@
 
         updateCurrentDate();
         window.setInterval(updateCurrentDate, 60000);
-        loadProfile();
-        updateProfilePreview();
+        initializeProfile();
 
-        function saveProfile(event) {
+        async function initializeProfile() {
+            await loadProfile();
+            updateProfilePreview();
+        }
+
+        async function saveProfile(event) {
             event.preventDefault();
 
             const profile = {
@@ -150,28 +153,50 @@
                 photo: profilePhotoData
             };
 
-            localStorage.setItem(storageKey, JSON.stringify(profile));
-            window.CoopAppUi.renderHeaderProfileName();
+            window.CoopAppUi.storeProfileLocally(profile);
+
+            if (window.CoopAuth.hasValidConfig()) {
+                try {
+                    const session = await window.CoopAuth.getSession();
+                    const userId = session?.user?.id;
+
+                    if (userId) {
+                        const client = window.CoopAuth.getClient();
+                        const { error } = await client
+                            .from("profiles")
+                            .upsert({
+                                id: userId,
+                                email: session.user.email || "",
+                                first_name: profile.firstName,
+                                last_name: profile.lastName,
+                                photo: profile.photo
+                            }, { onConflict: "id" });
+
+                        if (error) {
+                            throw error;
+                        }
+                    }
+                } catch (error) {
+                    window.alert("Profil enregistre localement, mais la synchronisation distante a echoue.");
+                }
+            }
+
+            await window.CoopAppUi.renderHeaderProfileName();
             updateProfilePreview();
             window.alert("Profil enregistre.");
         }
 
-        function loadProfile() {
-            const savedProfile = localStorage.getItem(storageKey);
+        async function loadProfile() {
+            const profile = await window.CoopAppUi.getProfile();
 
-            if (!savedProfile) {
+            if (!profile) {
                 return;
             }
 
-            try {
-                const profile = JSON.parse(savedProfile);
-                firstNameInput.value = profile.firstName || "";
-                lastNameInput.value = profile.lastName || "";
-                profilePhotoData = profile.photo || "";
-                renderProfilePhoto(profilePhotoData);
-            } catch (error) {
-                localStorage.removeItem(storageKey);
-            }
+            firstNameInput.value = profile.firstName || "";
+            lastNameInput.value = profile.lastName || "";
+            profilePhotoData = profile.photo || "";
+            renderProfilePhoto(profilePhotoData);
         }
 
         function handlePhotoSelection(event) {
@@ -188,11 +213,39 @@
             }
 
             const reader = new FileReader();
-            reader.addEventListener("load", () => {
-                profilePhotoData = String(reader.result || "");
-                renderProfilePhoto(profilePhotoData);
+            reader.addEventListener("load", async () => {
+                try {
+                    profilePhotoData = await optimizeProfileImage(String(reader.result || ""));
+                    renderProfilePhoto(profilePhotoData);
+                } catch (error) {
+                    photoInput.value = "";
+                    window.alert("Impossible de preparer cette image.");
+                }
             });
             reader.readAsDataURL(file);
+        }
+
+        async function optimizeProfileImage(source) {
+            const image = await loadImage(source);
+            const canvas = document.createElement("canvas");
+            const context = canvas.getContext("2d");
+            const maxSize = 500;
+            const scale = Math.min(1, maxSize / Math.max(image.width, image.height));
+
+            canvas.width = Math.max(1, Math.round(image.width * scale));
+            canvas.height = Math.max(1, Math.round(image.height * scale));
+            context.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+            return canvas.toDataURL("image/jpeg", 0.82);
+        }
+
+        function loadImage(source) {
+            return new Promise((resolve, reject) => {
+                const image = new Image();
+                image.onload = () => resolve(image);
+                image.onerror = reject;
+                image.src = source;
+            });
         }
 
         function updateProfilePreview() {
@@ -221,13 +274,40 @@
             profilePlaceholder.classList.remove("hidden");
         }
 
-        function resetProfile() {
+        async function resetProfile() {
             firstNameInput.value = "";
             lastNameInput.value = "";
             photoInput.value = "";
             profilePhotoData = "";
-            localStorage.removeItem(storageKey);
-            window.CoopAppUi.renderHeaderProfileName();
+            window.CoopAppUi.storeProfileLocally({
+                firstName: "",
+                lastName: "",
+                photo: ""
+            });
+
+            if (window.CoopAuth.hasValidConfig()) {
+                try {
+                    const session = await window.CoopAuth.getSession();
+                    const userId = session?.user?.id;
+
+                    if (userId) {
+                        const client = window.CoopAuth.getClient();
+                        await client
+                            .from("profiles")
+                            .upsert({
+                                id: userId,
+                                email: session.user.email || "",
+                                first_name: "",
+                                last_name: "",
+                                photo: ""
+                            }, { onConflict: "id" });
+                    }
+                } catch (error) {
+                    console.error(error);
+                }
+            }
+
+            await window.CoopAppUi.renderHeaderProfileName();
             updateProfilePreview();
         }
 

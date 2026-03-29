@@ -17,6 +17,15 @@ create table if not exists public.categories (
     label text not null
 );
 
+create table if not exists public.profiles (
+    id uuid primary key references auth.users(id) on delete cascade,
+    email text not null default '',
+    first_name text not null default '',
+    last_name text not null default '',
+    photo text not null default '',
+    updated_at timestamptz not null default timezone('utc', now())
+);
+
 create table if not exists public.sales (
     id uuid primary key default gen_random_uuid(),
     sale_date date not null default current_date,
@@ -155,8 +164,31 @@ $$;
 
 alter table public.products enable row level security;
 alter table public.categories enable row level security;
+alter table public.profiles enable row level security;
 alter table public.sales enable row level security;
 alter table public.sale_items enable row level security;
+
+drop policy if exists "Users can read their own profile" on public.profiles;
+create policy "Users can read their own profile"
+on public.profiles
+for select
+to authenticated
+using (auth.uid() = id);
+
+drop policy if exists "Users can insert their own profile" on public.profiles;
+create policy "Users can insert their own profile"
+on public.profiles
+for insert
+to authenticated
+with check (auth.uid() = id);
+
+drop policy if exists "Users can update their own profile" on public.profiles;
+create policy "Users can update their own profile"
+on public.profiles
+for update
+to authenticated
+using (auth.uid() = id)
+with check (auth.uid() = id);
 
 drop policy if exists "Authenticated users can read categories" on public.categories;
 create policy "Authenticated users can read categories"
