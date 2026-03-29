@@ -109,7 +109,7 @@
         renderCart();
 
         function renderProducts() {
-            const products = window.CoopStockStore.getProducts();
+            const products = getStorefrontProducts();
             const categories = window.CoopStockStore.categories;
 
             categorySections.innerHTML = "";
@@ -149,7 +149,7 @@
                         ${imageMarkup}
                         <span class="article-name">${product.name}</span>
                         <span class="article-price">${formatPrice(product.price)} EUR</span>
-                        <span class="article-stock">Stock rayon : <span class="stock">${product.stockShelf}</span></span>
+                        <span class="article-stock">${product.stockLabel || `Stock rayon : <span class="stock">${product.stockShelf}</span>`}</span>
                     `;
 
                     articlesGrid.appendChild(articleButton);
@@ -168,13 +168,13 @@
                 return;
             }
 
-            if (product.stockShelf <= 0) {
+            if (product.availableStock < product.stockStep) {
                 window.alert("Stock rayon epuise.");
                 return;
             }
 
             try {
-                window.CoopStockStore.changeStock(productId, { stockShelfDelta: -1 });
+                window.CoopStockStore.changeStock(product.sourceProductId, { stockShelfDelta: -product.stockStep });
             } catch (error) {
                 window.alert("Impossible de retirer cet article du rayon.");
                 return;
@@ -183,9 +183,11 @@
             if (!cart[productId]) {
                 cart[productId] = {
                     id: product.id,
+                    sourceProductId: product.sourceProductId,
                     name: product.name,
                     price: product.price,
-                    qty: 0
+                    qty: 0,
+                    stockStep: product.stockStep
                 };
             }
 
@@ -202,7 +204,9 @@
             }
 
             try {
-                window.CoopStockStore.changeStock(productId, { stockShelfDelta: cartItem.qty });
+                window.CoopStockStore.changeStock(cartItem.sourceProductId, {
+                    stockShelfDelta: cartItem.qty * cartItem.stockStep
+                });
             } catch (error) {
                 window.alert("Impossible de remettre cet article en rayon.");
                 return;
@@ -284,7 +288,45 @@
         }
 
         function getProduct(productId) {
-            return window.CoopStockStore.getProducts().find((product) => product.id === productId) || null;
+            return getStorefrontProducts().find((product) => product.id === productId) || null;
+        }
+
+        function getStorefrontProducts() {
+            const rawProducts = window.CoopStockStore.getProducts();
+
+            return rawProducts.flatMap((product) => {
+                if (product.id !== "cafe-unite") {
+                    return [{
+                        ...product,
+                        sourceProductId: product.id,
+                        stockStep: 1,
+                        availableStock: product.stockShelf
+                    }];
+                }
+
+                const unitProduct = {
+                    ...product,
+                    name: "Cafe Unite",
+                    sourceProductId: product.id,
+                    stockStep: 1,
+                    availableStock: product.stockShelf,
+                    stockLabel: `Stock rayon : <span class="stock">${product.stockShelf}</span>`
+                };
+
+                const rametteAvailable = Math.floor(product.stockShelf / 10);
+                const rametteProduct = {
+                    ...product,
+                    id: "cafe-ramette",
+                    name: "Cafe Ramette",
+                    price: 5,
+                    sourceProductId: product.id,
+                    stockStep: 10,
+                    availableStock: product.stockShelf,
+                    stockLabel: `Ramettes dispo : <span class="stock">${rametteAvailable}</span>`
+                };
+
+                return [unitProduct, rametteProduct];
+            });
         }
 
         function formatPrice(value) {

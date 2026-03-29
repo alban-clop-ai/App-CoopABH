@@ -133,7 +133,7 @@
 
         /* Affichage complet de la page stock */
         function renderStockPage() {
-            const products = window.CoopStockStore.getProducts();
+            const products = getVisibleStockProducts();
             renderSummary(products);
             renderProductCards(products);
         }
@@ -175,6 +175,10 @@
             stockList.querySelectorAll(".stock-action-btn").forEach((button) => {
                 button.addEventListener("click", handleStockAction);
             });
+        }
+
+        function getVisibleStockProducts() {
+            return window.CoopStockStore.getProducts().filter((product) => product.id !== "cafe-ramette");
         }
 
         function createProductCard(product) {

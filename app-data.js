@@ -5,21 +5,12 @@
     const DEFAULT_PRODUCTS = [
         {
             id: "cafe-unite",
-            name: "Cafe Unite",
+            name: "Cafe",
             category: "cafes",
             price: 0.5,
-            stockShelf: 10,
-            stockReserve: 20,
+            stockShelf: 20,
+            stockReserve: 32,
             image: "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=600&q=80"
-        },
-        {
-            id: "cafe-ramette",
-            name: "Cafe Ramette",
-            category: "cafes",
-            price: 5,
-            stockShelf: 10,
-            stockReserve: 12,
-            image: "https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=600&q=80"
         },
         {
             id: "coca-cola",
@@ -152,6 +143,58 @@
         localStorage.setItem(STORAGE_KEY, JSON.stringify(products.map(normalizeProduct)));
     }
 
+    function migrateCafeProducts(products) {
+        const baseCafe = products.find((product) => product.id === "cafe-unite");
+        const rametteCafe = products.find((product) => product.id === "cafe-ramette");
+
+        if (!baseCafe && !rametteCafe) {
+            return products;
+        }
+
+        if (baseCafe && rametteCafe) {
+            const mergedProducts = products
+                .filter((product) => product.id !== "cafe-ramette")
+                .map((product) => {
+                    if (product.id !== "cafe-unite") {
+                        return product;
+                    }
+
+                    return normalizeProduct({
+                        ...product,
+                        name: "Cafe",
+                        stockShelf: product.stockShelf + rametteCafe.stockShelf,
+                        stockReserve: product.stockReserve + rametteCafe.stockReserve
+                    });
+                });
+
+            return mergedProducts;
+        }
+
+        if (!baseCafe && rametteCafe) {
+            const nextProducts = products
+                .filter((product) => product.id !== "cafe-ramette");
+
+            nextProducts.push(normalizeProduct({
+                ...rametteCafe,
+                id: "cafe-unite",
+                name: "Cafe"
+            }));
+
+            return nextProducts;
+        }
+
+        return products.map((product) => {
+            if (product.id !== "cafe-unite") {
+                return product;
+            }
+
+            return normalizeProduct({
+                ...product,
+                name: "Cafe"
+            });
+        });
+    }
+
     function normalizeSaleItem(item) {
         return {
             id: String(item.id),
@@ -200,12 +243,12 @@
         const storedProducts = readProducts();
 
         if (storedProducts && storedProducts.length > 0) {
-            const mergedProducts = mergeWithDefaults(storedProducts);
+            const mergedProducts = migrateCafeProducts(mergeWithDefaults(storedProducts));
             writeProducts(mergedProducts);
             return mergedProducts;
         }
 
-        const defaults = DEFAULT_PRODUCTS.map(normalizeProduct);
+        const defaults = migrateCafeProducts(DEFAULT_PRODUCTS.map(normalizeProduct));
         writeProducts(defaults);
         return defaults;
     }
