@@ -1,5 +1,6 @@
 const AUTH_LOGIN_PAGE = "index.html";
 const AUTH_HOME_PAGE = "index1.html";
+let authClient = null;
 
 function getAuthConfig() {
     return window.CoopAuthConfig || {};
@@ -17,6 +18,10 @@ function hasValidConfig() {
 }
 
 function createAuthClient() {
+    if (authClient) {
+        return authClient;
+    }
+
     if (!window.supabase || typeof window.supabase.createClient !== "function") {
         throw new Error("Supabase n'est pas charge.");
     }
@@ -27,13 +32,15 @@ function createAuthClient() {
 
     const { supabaseUrl, supabaseAnonKey } = getAuthConfig();
 
-    return window.supabase.createClient(supabaseUrl, supabaseAnonKey, {
+    authClient = window.supabase.createClient(supabaseUrl, supabaseAnonKey, {
         auth: {
             persistSession: true,
             autoRefreshToken: true,
             detectSessionInUrl: true
         }
     });
+
+    return authClient;
 }
 
 async function getSession() {
@@ -168,5 +175,6 @@ window.CoopAuth = {
     attachLogoutButton,
     logout,
     getSession,
-    hasValidConfig
+    hasValidConfig,
+    getClient: createAuthClient
 };

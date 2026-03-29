@@ -104,15 +104,22 @@
         validateSaleButton.addEventListener("click", validateSale);
         document.addEventListener("keydown", handleEscapeToCloseMenu);
         document.addEventListener("visibilitychange", handleVisibilityChange);
-        window.addEventListener("storage", renderProducts);
+        window.CoopStockStore.subscribe(() => {
+            renderProducts();
+        });
 
-        updateCurrentDate();
-        window.setInterval(updateCurrentDate, 60000);
-        renderProducts();
-        renderCart();
+        initializePage();
 
-        function renderProducts() {
-            const products = getStorefrontProducts();
+        async function initializePage() {
+            await window.CoopStockStore.init();
+            updateCurrentDate();
+            window.setInterval(updateCurrentDate, 60000);
+            await renderProducts();
+            renderCart();
+        }
+
+        async function renderProducts() {
+            const products = await getStorefrontProducts();
             const categories = window.CoopStockStore.categories;
 
             categorySections.innerHTML = "";
@@ -142,7 +149,9 @@
                     articleButton.type = "button";
                     articleButton.className = `article ${categoryStyles[product.category] || "article-snack"}`;
                     articleButton.dataset.id = product.id;
-                    articleButton.addEventListener("click", () => addToCart(product.id));
+                    articleButton.addEventListener("click", async () => {
+                        await addToCart(product.id);
+                    });
 
                     const imageMarkup = product.image
                         ? `<img src="${product.image}" alt="${product.name}" class="article-image">`
@@ -163,8 +172,8 @@
             });
         }
 
-        function addToCart(productId) {
-            const product = getProduct(productId);
+        async function addToCart(productId) {
+            const product = await getProduct(productId);
 
             if (!product) {
                 window.alert("Article introuvable.");
@@ -177,7 +186,7 @@
             }
 
             try {
-                window.CoopStockStore.changeStock(product.sourceProductId, { stockShelfDelta: -product.stockStep });
+                await window.CoopStockStore.changeStock(product.sourceProductId, { stockShelfDelta: -product.stockStep });
             } catch (error) {
                 window.alert("Impossible de retirer cet article du rayon.");
                 return;
@@ -195,11 +204,11 @@
             }
 
             cart[productId].qty += 1;
-            renderProducts();
+            await renderProducts();
             renderCart();
         }
 
-        function removeItem(productId) {
+        async function removeItem(productId) {
             const cartItem = cart[productId];
 
             if (!cartItem) {
@@ -207,7 +216,7 @@
             }
 
             try {
-                window.CoopStockStore.changeStock(cartItem.sourceProductId, {
+                await window.CoopStockStore.changeStock(cartItem.sourceProductId, {
                     stockShelfDelta: cartItem.qty * cartItem.stockStep
                 });
             } catch (error) {
@@ -216,11 +225,11 @@
             }
 
             delete cart[productId];
-            renderProducts();
+            await renderProducts();
             renderCart();
         }
 
-        function validateSale() {
+        async function validateSale() {
             if (Object.keys(cart).length === 0) {
                 window.alert("Ticket vide !");
                 return;
@@ -237,7 +246,7 @@
 
             const saleTotal = saleItems.reduce((sum, item) => sum + (item.qty * item.price), 0);
 
-            window.CoopStockStore.recordSale({
+            await window.CoopStockStore.recordSale({
                 date: getTodayDate(),
                 createdAt: new Date().toISOString(),
                 items: saleItems,
@@ -245,6 +254,7 @@
             });
 
             cart = {};
+            await renderProducts();
             renderCart();
             window.alert("Vente validee.");
         }
@@ -281,7 +291,9 @@
                 removeButton.type = "button";
                 removeButton.className = "remove-item-btn";
                 removeButton.textContent = "Retirer";
-                removeButton.addEventListener("click", () => removeItem(item.id));
+                removeButton.addEventListener("click", async () => {
+                    await removeItem(item.id);
+                });
 
                 listItem.append(itemLabel, itemPrice, removeButton);
                 cartList.appendChild(listItem);
@@ -292,12 +304,13 @@
             totalPriceEl.textContent = formatPrice(total);
         }
 
-        function getProduct(productId) {
-            return getStorefrontProducts().find((product) => product.id === productId) || null;
+        async function getProduct(productId) {
+            const products = await getStorefrontProducts();
+            return products.find((product) => product.id === productId) || null;
         }
 
-        function getStorefrontProducts() {
-            const rawProducts = window.CoopStockStore.getProducts();
+        async function getStorefrontProducts() {
+            const rawProducts = await window.CoopStockStore.getProducts();
 
             return rawProducts.flatMap((product) => {
                 if (product.id !== "cafe-unite") {
@@ -354,10 +367,10 @@
             }).format(new Date());
         }
 
-        function handleVisibilityChange() {
+        async function handleVisibilityChange() {
             if (document.visibilityState === "visible") {
                 updateCurrentDate();
-                renderProducts();
+                await renderProducts();
             }
         }
 

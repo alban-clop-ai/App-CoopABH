@@ -126,17 +126,26 @@
         menuCloseButton.addEventListener("click", closeMenu);
         sideMenuLinks.forEach((link) => link.addEventListener("click", closeMenu));
         document.addEventListener("keydown", handleEscapeToCloseMenu);
-        addProductForm.addEventListener("submit", handleAddProduct);
-        window.addEventListener("storage", renderStockPage);
+        addProductForm.addEventListener("submit", async (event) => {
+            await handleAddProduct(event);
+        });
         document.addEventListener("visibilitychange", handleVisibilityChange);
+        window.CoopStockStore.subscribe(() => {
+            renderStockPage();
+        });
 
-        updateCurrentDate();
-        window.setInterval(updateCurrentDate, 60000);
-        renderStockPage();
+        initializePage();
+
+        async function initializePage() {
+            await window.CoopStockStore.init();
+            updateCurrentDate();
+            window.setInterval(updateCurrentDate, 60000);
+            await renderStockPage();
+        }
 
         /* Affichage complet de la page stock */
-        function renderStockPage() {
-            const products = getVisibleStockProducts();
+        async function renderStockPage() {
+            const products = await getVisibleStockProducts();
             renderSummary(products);
             renderProductCards(products);
         }
@@ -176,12 +185,15 @@
             });
 
             stockList.querySelectorAll(".stock-action-btn").forEach((button) => {
-                button.addEventListener("click", handleStockAction);
+                button.addEventListener("click", async (event) => {
+                    await handleStockAction(event);
+                });
             });
         }
 
-        function getVisibleStockProducts() {
-            return window.CoopStockStore.getProducts().filter((product) => product.id !== "cafe-ramette");
+        async function getVisibleStockProducts() {
+            const products = await window.CoopStockStore.getProducts();
+            return products.filter((product) => product.id !== "cafe-ramette");
         }
 
         function createProductCard(product) {
@@ -238,7 +250,7 @@
         }
 
         /* Actions sur une carte article */
-        function handleStockAction(event) {
+        async function handleStockAction(event) {
             const button = event.currentTarget;
             const action = button.dataset.action;
             const productId = button.dataset.id;
@@ -246,19 +258,19 @@
             try {
                 if (action === "transfer") {
                     const quantity = getActionQuantity(button);
-                    window.CoopStockStore.transferReserveToShelf(productId, quantity);
+                    await window.CoopStockStore.transferReserveToShelf(productId, quantity);
                 }
 
                 if (action === "add-reserve") {
                     const quantity = getActionQuantity(button);
-                    window.CoopStockStore.changeStock(productId, { stockReserveDelta: quantity });
+                    await window.CoopStockStore.changeStock(productId, { stockReserveDelta: quantity });
                 }
 
                 if (action === "delete-product") {
-                    deleteProduct(productId);
+                    await deleteProduct(productId);
                 }
 
-                renderStockPage();
+                await renderStockPage();
             } catch (error) {
                 window.alert("Operation impossible. Verifie la quantite saisie et le stock disponible.");
             }
@@ -275,23 +287,23 @@
             return quantity;
         }
 
-        function deleteProduct(productId) {
+        async function deleteProduct(productId) {
             const confirmed = window.confirm("Supprimer cet article du stock et de l'accueil ?");
 
             if (!confirmed) {
                 return;
             }
 
-            window.CoopStockStore.deleteProduct(productId);
+            await window.CoopStockStore.deleteProduct(productId);
         }
 
         /* Ajout d'un nouvel article */
-        function handleAddProduct(event) {
+        async function handleAddProduct(event) {
             event.preventDefault();
 
             const formData = new FormData(addProductForm);
 
-            window.CoopStockStore.addProduct({
+            await window.CoopStockStore.addProduct({
                 name: String(formData.get("name") || "").trim(),
                 category: String(formData.get("category") || "snacks"),
                 price: Number(formData.get("price") || 0),
@@ -303,7 +315,7 @@
             addProductForm.reset();
             addProductForm.querySelector("#product-shelf").value = 0;
             addProductForm.querySelector("#product-reserve").value = 0;
-            renderStockPage();
+            await renderStockPage();
             window.alert("Article ajoute.");
         }
 
@@ -320,10 +332,10 @@
             }).format(new Date());
         }
 
-        function handleVisibilityChange() {
+        async function handleVisibilityChange() {
             if (document.visibilityState === "visible") {
                 updateCurrentDate();
-                renderStockPage();
+                await renderStockPage();
             }
         }
 

@@ -91,23 +91,32 @@
         sideMenuLinks.forEach((link) => link.addEventListener("click", closeMenu));
         document.addEventListener("keydown", handleEscapeToCloseMenu);
         document.addEventListener("visibilitychange", handleVisibilityChange);
-        window.addEventListener("storage", renderSalesPage);
-        salesDateInput.addEventListener("change", renderSalesPage);
+        salesDateInput.addEventListener("change", async () => {
+            await renderSalesPage();
+        });
+        window.CoopStockStore.subscribe(() => {
+            renderSalesPage();
+        });
 
         /* Initialisation */
-        salesDateInput.value = getTodayDate();
-        updateCurrentDate();
-        window.setInterval(updateCurrentDate, 60000);
-        renderSalesPage();
+        initializePage();
+
+        async function initializePage() {
+            await window.CoopStockStore.init();
+            salesDateInput.value = getTodayDate();
+            updateCurrentDate();
+            window.setInterval(updateCurrentDate, 60000);
+            await renderSalesPage();
+        }
 
         /* Affichage complet */
-        function renderSalesPage() {
+        async function renderSalesPage() {
             const selectedDate = salesDateInput.value || getTodayDate();
-            const salesForDay = window.CoopStockStore.getSalesByDate(selectedDate);
+            const salesForDay = await window.CoopStockStore.getSalesByDate(selectedDate);
 
             renderDailySummary(salesForDay);
             renderDailyDetails(salesForDay);
-            renderMonthQuickView();
+            await renderMonthQuickView();
         }
 
         /* Resume du jour */
@@ -156,7 +165,7 @@
                     <div class="sales-item-main">
                         <div>
                             <h3>Ticket ${formatTicketTime(sale.createdAt)}</h3>
-                            <p>${sale.items.length} article(s) sur ce ticket</p>
+                            <p>${sale.items.length} article(s) sur ce ticket${sale.createdByLabel ? ` - ${sale.createdByLabel}` : ""}</p>
                         </div>
                         <div class="sales-item-actions">
                             <strong>${formatPrice(sale.total)} EUR</strong>
@@ -169,13 +178,15 @@
             });
 
             salesList.querySelectorAll(".sales-cancel-btn").forEach((button) => {
-                button.addEventListener("click", handleSaleCancellation);
+                button.addEventListener("click", async (event) => {
+                    await handleSaleCancellation(event);
+                });
             });
         }
 
         /* Recettes rapides du mois en cours */
-        function renderMonthQuickView() {
-            const sales = window.CoopStockStore.getSales();
+        async function renderMonthQuickView() {
+            const sales = await window.CoopStockStore.getSales();
             const currentMonth = getTodayDate().slice(0, 7);
             const totalsByDate = {};
 
@@ -237,7 +248,7 @@
             };
         }
 
-        function handleSaleCancellation(event) {
+        async function handleSaleCancellation(event) {
             const saleId = event.currentTarget.dataset.saleId;
             const confirmed = window.confirm("Annuler ce ticket et remettre les articles dans le stock ?");
 
@@ -246,8 +257,8 @@
             }
 
             try {
-                window.CoopStockStore.deleteSale(saleId);
-                renderSalesPage();
+                await window.CoopStockStore.deleteSale(saleId);
+                await renderSalesPage();
                 window.alert("Ticket annule.");
             } catch (error) {
                 window.alert("Impossible d'annuler ce ticket.");
@@ -289,10 +300,10 @@
             }).format(new Date());
         }
 
-        function handleVisibilityChange() {
+        async function handleVisibilityChange() {
             if (document.visibilityState === "visible") {
                 updateCurrentDate();
-                renderSalesPage();
+                await renderSalesPage();
             }
         }
 
