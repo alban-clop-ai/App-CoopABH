@@ -123,6 +123,15 @@
     let realtimeChannel = null;
     const listeners = new Set();
 
+    function hydrateLocalFallback() {
+        categoriesCache = readCategoriesLocal() || getDefaultCategories();
+        productsCache = readProductsLocal() || getDefaultProducts();
+        salesCache = readSalesLocal();
+        writeCategoriesLocal(categoriesCache);
+        writeProductsLocal(productsCache);
+        writeSalesLocal(salesCache);
+    }
+
     function deepCopy(value) {
         return JSON.parse(JSON.stringify(value));
     }
@@ -451,18 +460,27 @@
     }
 
     async function refreshRemoteData() {
-        const [categories, products, sales] = await Promise.all([
+        const [categoriesResult, productsResult, salesResult] = await Promise.allSettled([
             loadRemoteCategories(),
             loadRemoteProducts(),
             loadRemoteSales()
         ]);
 
-        categoriesCache = categories;
-        productsCache = products;
-        salesCache = sales;
-        writeCategoriesLocal(categories);
-        writeProductsLocal(products);
-        writeSalesLocal(sales);
+        categoriesCache = categoriesResult.status === "fulfilled"
+            ? categoriesResult.value
+            : (readCategoriesLocal() || getDefaultCategories());
+
+        productsCache = productsResult.status === "fulfilled"
+            ? productsResult.value
+            : (readProductsLocal() || getDefaultProducts());
+
+        salesCache = salesResult.status === "fulfilled"
+            ? salesResult.value
+            : readSalesLocal();
+
+        writeCategoriesLocal(categoriesCache);
+        writeProductsLocal(productsCache);
+        writeSalesLocal(salesCache);
     }
 
     function notifyListeners() {
@@ -510,19 +528,20 @@
 
         initPromise = (async () => {
             if (!hasRemoteStore()) {
-                categoriesCache = readCategoriesLocal() || getDefaultCategories();
-                productsCache = readProductsLocal() || getDefaultProducts();
-                salesCache = readSalesLocal();
-                writeCategoriesLocal(categoriesCache);
-                writeProductsLocal(productsCache);
-                writeSalesLocal(salesCache);
+                hydrateLocalFallback();
                 initialized = true;
                 return;
             }
 
-            await ensureRemoteSeed();
-            await refreshRemoteData();
-            setupRealtime();
+            try {
+                await ensureRemoteSeed();
+                await refreshRemoteData();
+                setupRealtime();
+            } catch (error) {
+                console.error("Fallback local active:", error);
+                hydrateLocalFallback();
+            }
+
             initialized = true;
         })();
 

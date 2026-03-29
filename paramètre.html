@@ -201,9 +201,9 @@
         initializePage();
 
         async function initializePage() {
-            await window.CoopStockStore.init();
             updateCurrentDate();
             window.setInterval(updateCurrentDate, 60000);
+            await window.CoopStockStore.init();
             await refreshPageData();
         }
 

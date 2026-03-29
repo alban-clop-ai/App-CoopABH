@@ -113,10 +113,10 @@
         initializePage();
 
         async function initializePage() {
-            await window.CoopStockStore.init();
-            salesDateInput.value = getTodayDate();
             updateCurrentDate();
             window.setInterval(updateCurrentDate, 60000);
+            salesDateInput.value = getTodayDate();
+            await window.CoopStockStore.init();
             await renderSalesPage();
         }
 
