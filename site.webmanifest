@@ -1,0 +1,16 @@
+{
+    "name": "Cooperative Airbus",
+    "short_name": "Coop Airbus",
+    "start_url": "/index.html",
+    "display": "standalone",
+    "background_color": "#f4f4f4",
+    "theme_color": "#d1591e",
+    "icons": [
+        {
+            "src": "logo-login.jpg",
+            "sizes": "512x512",
+            "type": "image/jpeg",
+            "purpose": "any"
+        }
+    ]
+}
